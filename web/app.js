@@ -1,0 +1,175 @@
+'use strict';
+const $ = id => document.getElementById(id);
+const token = location.hash.slice(1);
+history.replaceState(null, '', '/');
+const state = {tabs:[],current:null,job:null,jobTab:null,starting:false,stopping:null,revision:0,status:null,displayed:null,validation:null,panel:null,lastPrompt:'',timer:null,queued:null};
+async function api(path, body) {
+  const response = await fetch('/api/' + path, {method:body ? 'POST':'GET',headers:{'X-Elsewhere-Token':token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
+  const result = await response.json();
+  if(!response.ok) throw new Error(result.error || 'The local application did not respond.');
+  return result;
+}
+function toast(message) { $('toast').textContent=message;$('toast').hidden=false;clearTimeout(state.timer);state.timer=setTimeout(()=>$('toast').hidden=true,6000); }
+const current = () => state.tabs.find(t=>t.id===state.current);
+const saved = () => {const t=current();return t?.pages[t.index] || null;};
+function tabTitle(tab) {return tab.id===state.jobTab && state.job ? state.lastPrompt : (tab.pages[tab.index]?.title || 'New possibility');}
+function drawTabs() {
+  $('tabs').replaceChildren();
+  for(const tab of state.tabs) {
+    const el=document.createElement('div');el.className='tab'+(tab.id===state.current?' active':'');el.setAttribute('role','tab');el.setAttribute('aria-selected',String(tab.id===state.current));el.tabIndex=0;
+    const label=document.createElement('span');label.textContent=tabTitle(tab);el.append(label);
+    const close=document.createElement('button');close.textContent='×';close.title='Close tab';close.setAttribute('aria-label','Close '+label.textContent);close.onclick=e=>{e.stopPropagation();closeTab(tab.id);};el.append(close);
+    el.onclick=()=>switchTab(tab.id);el.onkeydown=e=>{if(e.key==='Enter')switchTab(tab.id);};$('tabs').append(el);
+  }
+  const t=current();$('back').disabled=!t || t.index<=0;$('forward').disabled=!t || t.index>=t.pages.length-1;
+  $('reload').disabled=!saved();$('reimagine').disabled=!!state.job || !saved();$('details-button').hidden=!saved();
+}
+function newTab() {if(state.tabs.length>=8){toast('Eight tabs are open. Close one to keep things light.');return;} const tab={id:crypto.randomUUID(),pages:[],index:-1};state.tabs.push(tab);switchTab(tab.id);$('address').focus();}
+function switchTab(id) {state.current=id;renderSaved();drawTabs();closePanel();}
+async function closeTab(id) {if(state.starting){toast('Starting this page; try again in a moment.');return;}if(state.jobTab===id&&state.job)await stop();const index=state.tabs.findIndex(t=>t.id===id);state.tabs.splice(index,1);if(!state.tabs.length)newTab();else if(state.current===id)switchTab(state.tabs[Math.max(0,index-1)].id);drawTabs();}
+function showPage(page, job=null, revision=0) {
+  state.displayed={page,job,revision};
+  $('blank').hidden=true;$('error').hidden=true;$('loading').hidden=true;$('page').hidden=false;
+  $('page').srcdoc=page.html;
+  $('address').value=job?state.lastPrompt:page.prompt;
+  $('imagined-label').hidden=false;
+  $('review-chip').hidden=!job;
+}
+function renderSaved() {
+  const page=saved();state.displayed=null;
+  $('error').hidden=true;$('loading').hidden=true;$('review-chip').hidden=true;
+  if(page){showPage(page);$('page-status').textContent=`Imagined in ${page.seconds}s · saved locally`;}
+  else{$('page').hidden=true;$('page').removeAttribute('srcdoc');$('blank').hidden=false;$('address').value='';$('imagined-label').hidden=true;$('page-status').textContent='A blank page. An open possibility.';}
+  drawTabs();
+}
+async function navigate(prompt, parentId=null, seed=null) {
+  prompt=prompt.trim();if(!prompt)return;
+  if(state.starting)return;
+  state.starting=true;
+  state.queued=null;
+  const tab=current();
+  try {
+    if(state.stopping)await state.stopping;else if(state.job)await stop();
+    closePanel();state.lastPrompt=prompt;
+    const result=await api('generate',{prompt,parent:parentId,seed});
+    state.job=result.id;state.jobTab=tab.id;state.revision=0;
+    if(state.current===tab.id){$('address').value=prompt;$('blank').hidden=true;$('page').hidden=true;$('error').hidden=true;$('loading').hidden=false;$('loading-stage').textContent='Imagining your page';$('loading-detail').textContent='';$('review-chip').hidden=true;}
+    $('stop').hidden=false;
+    drawTabs();pollJob(result.id);
+  }catch(error){toast(error.message);}finally{state.starting=false;}
+}
+async function pollJob(id) {
+  if(state.job!==id)return;
+  try {
+    const job=await api('jobs/'+id);
+    if(state.job!==id)return;
+    const visible=state.current===state.jobTab;
+    if(job.page&&(state.validation?.job!==id||state.validation?.revision!==job.revision)){
+      state.validation={page:job.page,job:id,revision:job.revision};
+      const rect=$('viewport').getBoundingClientRect();$('validation-frame').style.width=rect.width+'px';$('validation-frame').style.height=rect.height+'px';$('validation-frame').srcdoc=job.page.html;
+    }
+    const validation=state.validation;
+    if(validation?.job===id&&!validation.reported){$('validation-frame').contentWindow.postMessage({measure:true,capability:validation.page.capability},'*');}
+    if(visible){
+      $('loading-stage').textContent=job.stage;
+      $('loading-detail').textContent=`${Math.floor(Date.now()/1000-job.started)}s${job.chars?' · '+Math.round(job.chars/4).toLocaleString()+' approximate tokens':''}`;
+      $('review-stage').textContent=job.stage;
+      $('page-status').textContent=job.stage;
+      if(job.page&&(state.revision!==job.revision||state.displayed?.job!==id)) {state.revision=job.revision;showPage(job.page,id,job.revision);}
+    }
+    if(job.state==='done') {
+      const tab=state.tabs.find(t=>t.id===state.jobTab);
+      if(tab){tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(job.result);tab.index=tab.pages.length-1;}
+      state.job=null;state.jobTab=null;$('stop').hidden=true;
+      if(visible)renderSaved();drawTabs();refreshStatus();followQueued(job.result.id);return;
+    }
+    if(job.state==='error'||job.state==='cancelled') {
+      state.job=null;state.jobTab=null;$('stop').hidden=true;
+      if(visible){renderSaved();if(job.state==='error'){if(saved())toast(job.error);else{$('blank').hidden=true;$('error').hidden=false;$('error-message').textContent=job.error;$('address').value=state.lastPrompt;}}}
+      drawTabs();if(state.queued){state.queued=null;toast('The page could not finish. Your queued link was not opened; retry the page first.');}return;
+    }
+  } catch(error) {toast(error.message);}
+  setTimeout(()=>pollJob(id),500);
+}
+async function stop() {
+  state.queued=null;
+  if(state.stopping)return state.stopping;
+  const id=state.job;if(!id)return;
+  state.stopping=(async()=>{
+    let stopped=false;
+    for(let attempt=0;attempt<2&&!stopped;attempt++){const result=await api('cancel',{id});stopped=result.stopped;}
+    if(!stopped)throw new Error('The model is still stopping. Wait a moment before navigating.');
+    if(state.job===id){state.job=null;state.jobTab=null;$('stop').hidden=true;renderSaved();}
+  })();
+  try{await state.stopping;}finally{state.stopping=null;}
+}
+function followQueued(parentId){
+  const queued=state.queued;state.queued=null;
+  if(!queued)return;
+  if(state.current!==queued.tab || !state.tabs.some(t=>t.id===queued.tab)){toast('Queued link cleared because you changed tabs.');return;}
+  navigate(queued.prompt,queued.fromJob?parentId:queued.parent);
+}
+async function refreshStatus() {
+  try{
+    state.status=await api('status');const ready=state.status.engine==='ready';
+    $('engine-dot').className=state.status.engine;
+    $('engine-status').textContent=ready?'On device · Qwen3.5 4B':state.status.engine==='error'?'Model unavailable':'Loading local model…';
+    $('engine-status').title=state.status.error || 'All generation happens on this computer.';
+    $('go').disabled=!ready;
+  }catch(error){$('engine-status').textContent='Disconnected';}
+}
+function closePanel(){$('panel').hidden=true;state.panel=null;}
+function panel(title,kind){state.panel=kind;$('panel').hidden=false;$('panel-title').textContent=title;$('panel-content').replaceChildren();return $('panel-content');}
+function paragraph(parent,text,cls='panel-note'){const p=document.createElement('p');p.className=cls;p.textContent=text;parent.append(p);return p;}
+function action(parent,text,fn){const b=document.createElement('button');b.className='secondary';b.textContent=text;b.onclick=fn;parent.append(b);return b;}
+async function showHistory(){if(state.panel==='history'){closePanel();return;}await refreshStatus();const content=panel('Places you’ve imagined','history');if(!state.status?.history.length)paragraph(content,'Your first destination is waiting in the address bar.');for(const item of state.status?.history||[]){const button=document.createElement('button');button.className='history-item';const title=document.createElement('strong');title.textContent=item.title;const desc=document.createElement('small');desc.textContent=item.prompt+' · '+new Date(item.created*1000).toLocaleDateString();button.append(title,desc);button.onclick=async()=>{try{if(state.job)await stop();const page=await api('pages/'+item.id);const tab=current();tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(page);tab.index=tab.pages.length-1;renderSaved();closePanel();}catch(e){toast(e.message);}};content.append(button);}}
+function showSettings(){if(state.panel==='settings'){closePanel();return;}const content=panel('A little direction','settings');
+  for(const [key,title,description] of [['memory','Carry the world forward','Remember an imagined place’s details as you follow its links. Turn off for independent interpretations.'],['review','Validation reviewer','Check language and structure with a separate model call. The reviewer preserves invented content.'],['visual','Look at the page','Include a screenshot in the review. Takes a little longer and requires the desktop window to show this tab.']]){
+    const label=document.createElement('label');label.className='setting';const copy=document.createElement('span');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=description;copy.append(strong,small);const input=document.createElement('input');input.type='checkbox';input.checked=!!state.status?.settings[key];input.onchange=async()=>{try{state.status.settings=await api('settings',{[key]:input.checked});}catch(e){toast(e.message);input.checked=!input.checked;}};label.append(copy,input);content.append(label);
+  }
+  paragraph(content,'Everything you enter is a creative prompt. Addresses never contact a real website. Code checks always run. Changes apply to the next page.');
+  paragraph(content,'One local model · separate validation context · at most one refinement.');
+  paragraph(content,'Saved on this computer: '+(state.status?.data_path||''));
+}
+function showDetails(){const page=saved();if(!page)return;if(state.panel==='details'){closePanel();return;}const content=panel('Behind this page','details');paragraph(content,page.title);const dl=document.createElement('dl');dl.className='details-list';for(const [k,v] of [['Entry',page.prompt],['Seed',String(page.seed)],['Time',page.seconds+' seconds'],['Memory',page.settings.memory?'On':'Off'],['Review',page.review?.unavailable?'Unavailable':page.review?(page.review.visual?'Visual + language':'Language + structure'):'Code checks only'],['Refinement',page.repaired?'One pass':'None']]){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=k;dd.textContent=v;dl.append(dt,dd);}content.append(dl);if(page.review)paragraph(content,page.review.summary+(page.repaired?' This report describes the first version; the refinement was checked by code.':''),'review-report');for(const issue of page.review?.issues||[])paragraph(content,issue.detail,'review-report');const actions=document.createElement('div');actions.className='detail-actions';content.append(actions);
+  action(actions,'Export HTML',async()=>{try{const result=await api('export',{id:page.id});toast('Saved: '+result.path);}catch(e){toast(e.message);}});
+  action(actions,'View HTML',()=>{const pre=document.createElement('pre');pre.className='source';pre.textContent=page.html;content.append(pre);});
+  action(actions,'Generation record',async()=>{try{const trace=await api('trace',{id:page.id});const pre=document.createElement('pre');pre.className='source';pre.textContent=JSON.stringify(trace,null,2);content.append(pre);}catch(e){toast(e.message);}});
+  action(actions,'Repeat seed',()=>navigate(page.prompt,null,page.seed));
+}
+window.addEventListener('message',event=>{
+  if(event.source===$('validation-frame').contentWindow){
+    const v=state.validation,d=event.data;
+    if(v&&d&&d.elsewhere===true&&d.capability===v.page.capability&&d.kind==='layout'&&v.job===state.job&&!v.reported){
+      const sample={width:Number(d.width)||0,overflow:d.overflow===true,overflowing:Array.isArray(d.overflowing)?d.overflowing.slice(0,6):[]};
+      if(!v.wide){v.wide=sample;if(sample.width>640){$('validation-frame').style.width='640px';return;}}
+      if(v.wide.width>640&&sample.width>640)return; // Ignore duplicate wide reports queued before resize.
+      v.reported=true;
+      const samples=v.wide===sample?[sample]:[v.wide,sample];
+      api('rendered',{id:v.job,revision:v.revision,layout:{width:v.wide.width,overflow:samples.some(s=>s.overflow),overflowing:samples.flatMap(s=>s.overflowing).slice(0,6),samples:samples.map(s=>({width:s.width,overflow:s.overflow}))}}).catch(()=>{v.reported=false;});
+    }
+    return;
+  }
+  const displayed=state.displayed,data=event.data;
+  if(event.source!==$('page').contentWindow||!displayed||!data||data.elsewhere!==true||data.capability!==displayed.page.capability)return;
+  if(data.kind==='navigate'&&typeof data.prompt==='string'&&data.prompt.trim()&&data.prompt.length<=600){
+    if(state.job){state.queued={prompt:data.prompt,tab:state.current,fromJob:displayed.job===state.job,parent:displayed.page.id||saved()?.id};toast('Link queued until this page finishes checking. Clicking another link replaces it.');}
+    else if(state.starting){toast('Starting your page. Please wait a moment.');}
+    else navigate(data.prompt,displayed.page.id||saved()?.id);
+  }
+  if(data.kind==='shortcut'){if(data.key==='l'){$('address').focus();$('address').select();}if(data.key==='t')newTab();if(data.key==='w')closeTab(state.current);}
+});
+// Read by the desktop screenshot provider; not a backend command bridge.
+window.elsewhereCaptureInfo=()=>({job:state.displayed?.job,revision:state.displayed?.revision,panel:!!state.panel,rect:(()=>{const r=$('page').getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,viewportWidth:innerWidth,viewportHeight:innerHeight};})()});
+window.elsewherePauseMotion=()=>{try{$('review-chip').hidden=true;$('page').contentWindow.postMessage({freeze:true,capability:state.displayed?.page.capability},'*');}catch{}};
+$('address-form').onsubmit=e=>{e.preventDefault();navigate($('address').value);};
+$('new-tab').onclick=newTab;$('back').onclick=async()=>{const t=current();if(state.jobTab===t.id)await stop();if(t.index>0){t.index--;if(current()===t)renderSaved();}};$('forward').onclick=async()=>{const t=current();if(state.jobTab===t.id)await stop();if(t.index<t.pages.length-1){t.index++;if(current()===t)renderSaved();}};
+$('reload').onclick=async()=>{if(state.jobTab===state.current)await stop();renderSaved();};$('reimagine').onclick=()=>{const p=saved();if(p)navigate(p.prompt,p.id);};$('retry').onclick=()=>navigate(state.lastPrompt);$('stop').onclick=()=>stop().catch(e=>toast(e.message));
+$('history-button').onclick=showHistory;$('settings-button').onclick=showSettings;$('close-panel').onclick=closePanel;$('details-button').onclick=showDetails;
+document.addEventListener('keydown',event=>{
+  if(event.key==='F5'){event.preventDefault();$('reload').click();}
+  if(event.ctrlKey){const key=event.key.toLowerCase();if(['l','t','w','r'].includes(key)){event.preventDefault();if(key==='l'){$('address').focus();$('address').select();}if(key==='t')newTab();if(key==='w')closeTab(state.current);if(key==='r')$('reload').click();}}
+  if(event.altKey&&event.key==='ArrowLeft'){event.preventDefault();$('back').click();}if(event.altKey&&event.key==='ArrowRight'){event.preventDefault();$('forward').click();}
+  if(event.key==='Escape'){if(state.panel)closePanel();else if(state.job)stop();}
+});
+newTab();refreshStatus();setInterval(refreshStatus,4000);

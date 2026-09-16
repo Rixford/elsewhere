@@ -1,0 +1,98 @@
+[
+  {
+    "File": ".github/workflows/checks.yml",
+    "Hash": "dae7bb1f60dd603f1a3c7bee54150fdb3231c0072e49d4a52aaa4e630a6f6bb1"
+  },
+  {
+    "File": ".gitignore",
+    "Hash": "4e42bfa0b16a076509bd5c92f9b460e0139ad9d69d884a7ee6c660fcaee88ade"
+  },
+  {
+    "File": "CHANGELOG.md",
+    "Hash": "347a8d0190f11fa2b101483a3e71175ca82979844ee254a7418035c349b731b6"
+  },
+  {
+    "File": "Elsewhere.ico",
+    "Hash": "aa3561718b45bc7fc05032004aba2d112fa9b0bd076799a6279a75150bf88ad6"
+  },
+  {
+    "File": "LICENSE",
+    "Hash": "124d663b72f1592e29f001985456d523e83d422561c2b3edca80fb10e1e877e0"
+  },
+  {
+    "File": "README.md",
+    "Hash": "5c6f248d19e2c08725e0a453ba1e6ab38b92816a3ee92bfa1b9a1c49a7e65e92"
+  },
+  {
+    "File": "Setup Elsewhere.cmd",
+    "Hash": "2082fe47b09e02efae60b3dcd8e1ecc403af02a453275c00a9f16a93d25fe735"
+  },
+  {
+    "File": "Start Elsewhere.vbs",
+    "Hash": "6de7c383dbd5ff348d1db83cb2aff9d10280be1b416e5e35b78162142b86c649"
+  },
+  {
+    "File": "THIRD_PARTY.md",
+    "Hash": "f52a68126dde449fbf4603efddab7b5fb32f2c3f4860eb282c27c21f97109a38"
+  },
+  {
+    "File": "VALIDATION.md",
+    "Hash": "96b6395c3fbd16b5681c61044b12e637f465a0ca3eeff649e8955e1e9f9f5e97"
+  },
+  {
+    "File": "app.py",
+    "Hash": "7344df14a5aa6d9c281a62800ea6a803f47941909ab04d45b99a07a1998a3d1b"
+  },
+  {
+    "File": "backend.py",
+    "Hash": "165bcacb62dc7bc1e8c9ec6bd22b3e300af33bf52f6ffddc2d8136bb9790f0db"
+  },
+  {
+    "File": "engine.py",
+    "Hash": "ee2513eceb1d68d6a69a8fbaed6536caa9a7982a527ce6e0bf965e84d839533a"
+  },
+  {
+    "File": "make_icon.py",
+    "Hash": "d4bcd8edac02883d1514e499817c3ced4c98a8bcaf368daf67d0ad979fc975be"
+  },
+  {
+    "File": "requirements.txt",
+    "Hash": "0330ab7bae9f180d88038ef6775048bf42875331da2d1c045235587739933dcf"
+  },
+  {
+    "File": "sanitize.py",
+    "Hash": "4d4ef9321897b3f1ac0ebf1bf2705d9e2e25564e68ea117b4d57365679301305"
+  },
+  {
+    "File": "setup.py",
+    "Hash": "fd605af213e37732769741048a623e59e3a90980f56243fa6a47325b6dde3220"
+  },
+  {
+    "File": "test_browser.py",
+    "Hash": "d0edc1c2c1a339f23f389851b28709f7bfa63cd8b0747bf63d9f7ff4f2bf185b"
+  },
+  {
+    "File": "test_core.py",
+    "Hash": "c594627a821d6664c2b248f5bf7c6428fb12391f3b9c2a6d46e793fcaba01b8d"
+  },
+  {
+    "File": "test_ui.cjs",
+    "Hash": "d2a25d835f136f94ce61bd62d7e452520f5a520410f9fafdcfa3bf1c1232051d"
+  },
+  {
+    "File": "web/app.css",
+    "Hash": "84dd566ed63faad0a1d25b72f9c964d528dcf91c8028a6b3df40de603ddea402"
+  },
+  {
+    "File": "web/app.js",
+    "Hash": "d9b1ae5aa9684101aab6e41c0c2a2f7514feda268568ed05119331fe0bd0cbf4"
+  },
+  {
+    "File": "web/index.html",
+    "Hash": "f2d2567d84dbc0eb3b035a2a2208c17730fa560925fbbc8f048a0dd9d4f15a94"
+  },
+  {
+    "File": "web/page-controller.js",
+    "Hash": "133039d7f4215660297b4ba05b9d46d08f208093783ab737c8f1a683ee394cb8"
+  }
+]
