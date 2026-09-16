@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
 from engine import Engine, Cancelled, GENERATE, REVIEW
-from cloud import CloudEngine, ProviderError, PRESETS, checked_route
+from cloud import CloudEngine, ProviderError, ProviderRefusal, PRESETS, checked_route
 from sanitize import sanitize
 
 ROOT = Path(__file__).resolve().parent
@@ -268,6 +268,7 @@ class App:
         trace.update(generator_instructions=GENERATE,reviewer_instructions=REVIEW,sampling={'temperature':.9,'repair_temperature':.35,'review_temperature':.1,'top_p':.92,'top_k':40,'max_output_tokens':5200,'context_tokens':16384})
         if provider!='local': trace['sampling']={'generation_output_budget':9296,'seed_supported':False,'automatic_network_retries':0}
         try:
+            trace['phase']='generation'
             progress = lambda n: job.update(chars=n)
             raw, stats = runner.generate(job['prompt'],job['context'],job['cancel'],job['seed'],progress)
             trace['original_html'] = raw
@@ -282,6 +283,7 @@ class App:
                 page = None
                 issues.append(str(exc))
             if page:
+                trace['phase']='layout'
                 job.update(state='reviewing',stage='Checking layout')
                 self.wait_render(job)
                 issues.extend(page['issues'])
@@ -295,10 +297,11 @@ class App:
                     except Exception as exc:
                         trace['capture_error'] = str(exc)[:300]
                 if job['settings']['review']:
+                    trace['phase']='review'
                     job['stage'] = 'Reviewing visuals and language' if screenshot else 'Reviewing language and structure'
                     try:
                         review = runner.review(page,job['layout'],screenshot,job['cancel'])
-                    except (Cancelled,ProviderError):
+                    except (Cancelled,ProviderRefusal):
                         raise
                     except Exception as exc:
                         review = {'issues':[],'summary':'Model review unavailable: '+str(exc)[:160],'visual':False,'unavailable':True}
@@ -306,12 +309,15 @@ class App:
                     trace['review'] = review
                     issues.extend(x['detail'] for x in review['issues'] if x['severity'] == 'error')
             if issues:
+                trace['phase']='refinement'
                 job.update(state='repairing', stage='Refining presentation', repair=True, chars=0)
                 if page and not structural_issues:
                     try:
                         raw, stats = runner.patch(raw,issues[:4],job['cancel'],job['seed'])
                         trace['repair_mode'] = 'targeted'
-                    except ValueError as exc:
+                    except (Cancelled,ProviderRefusal):
+                        raise
+                    except (ValueError,ProviderError) as exc:
                         # A failed cosmetic patch must not discard a structurally
                         # usable page or force another expensive model call.
                         trace['patch_warning'] = str(exc)
@@ -345,13 +351,14 @@ class App:
                     self.domains = dict(list(self.domains.items())[-80:])
                     atomic_json(self.data/'domains.json',self.domains)
                 job.update(state='done',stage='Ready',result=result)
+                trace['phase']='complete'
         except Cancelled:
             job.update(state='cancelled',stage='Stopped')
         except Exception as exc:
             job.update(state='error',stage='Could not finish this page',error=str(exc))
         finally:
             job.pop('runner',None)
-            trace.update(state=job['state'],error=job['error'],seconds=round(time.time()-job['started'],2))
+            trace.update(state=job['state'],error=job['error'],layout=job.get('layout',{}),seconds=round(time.time()-job['started'],2))
             atomic_json(self.data/'cache'/f"{job['id']}.trace.json",trace)
 
     def load_page(self, page_id):

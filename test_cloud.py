@@ -8,8 +8,8 @@ import unittest
 from unittest.mock import patch, Mock
 
 from backend import App
-from cloud import CloudEngine, ProviderError, checked_route
-from engine import Cancelled
+from cloud import CloudEngine, ProviderError, ProviderRefusal, checked_route
+from engine import Cancelled, REVIEW_SCHEMA, PATCH_SCHEMA
 
 KEY='test-only-secret-not-a-real-key'
 HTML='<html><head><title>Cloud fixture</title></head><body><h1>The Library</h1><p>A complete invented page of stories and ideas.</p></body></html>'
@@ -89,11 +89,36 @@ class CloudTests(unittest.TestCase):
         conn.sock.shutdown.assert_called_once()
 
     def test_json_output_and_no_automatic_reprompt_of_plain_refusal(self):
-        self.assertEqual(self.engine().payload([],550,True)['text']['format']['type'],'json_object')
+        for schema in (REVIEW_SCHEMA, PATCH_SCHEMA):
+            output=self.engine().payload([],550,schema)['text']['format']
+            self.assertEqual(output['type'],'json_schema')
+            self.assertTrue(output['strict'])
+            self.assertEqual(output['schema'],schema)
         engine=self.engine()
         with patch.object(engine,'complete',return_value=('I cannot provide that.',{})) as call,self.assertRaises(ProviderError):
             engine.generate('request',None,threading.Event(),0,None)
         call.assert_called_once()
+
+    def test_review_and_patch_send_their_explicit_schemas(self):
+        engine=self.engine()
+        with patch.object(engine,'complete',return_value=('{"issues":[],"summary":"Clear"}',{})) as call:
+            report=engine.review({'html':HTML,'text':'Library'}, {}, None, threading.Event())
+        self.assertEqual(call.call_args.kwargs['json_output'],REVIEW_SCHEMA)
+        self.assertEqual(report['summary'],'Clear')
+        with patch.object(engine,'complete',return_value=('{"replacements":[{"old":"The Library","new":"Our Library"}]}',{})) as call:
+            raw,_=engine.patch(HTML,['Change title'],threading.Event(),0)
+        self.assertEqual(call.call_args.kwargs['json_output'],PATCH_SCHEMA)
+        self.assertIn('Our Library',raw)
+
+    def test_api_diagnostics_include_parameter_without_echoing_raw_message(self):
+        response=io.BytesIO(json.dumps({'error':{'message':KEY+' private page text','code':'unsupported_value','param':'text.format.type','type':KEY}}).encode())
+        response.status=400
+        with self.assertRaises(ProviderError) as caught:
+            self.run_stream(self.engine(),response)
+        self.assertIn('code=unsupported_value',str(caught.exception))
+        self.assertIn('param=text.format.type',str(caught.exception))
+        self.assertNotIn(KEY,str(caught.exception))
+        self.assertNotIn('private page text',str(caught.exception))
 
 
 class RouterTests(unittest.TestCase):
@@ -136,9 +161,48 @@ class RouterTests(unittest.TestCase):
 
     def test_provider_refusal_during_review_stops_without_fallback_or_repair(self):
         self.configure();job=self.job();runner=job['runner']
-        with patch.object(runner,'generate',return_value=(HTML,{'finish':'stop'})),patch.object(runner,'review',side_effect=ProviderError('Provider declined')),patch.object(runner,'patch') as repair,patch.object(self.app.engine,'generate') as local,patch.object(self.app,'wait_render'):
+        with patch.object(runner,'generate',return_value=(HTML,{'finish':'stop'})),patch.object(runner,'review',side_effect=ProviderRefusal('Provider declined')),patch.object(runner,'patch') as repair,patch.object(self.app.engine,'generate') as local,patch.object(self.app,'wait_render'):
             self.app.run_job(job)
         self.assertEqual(job['state'],'error');repair.assert_not_called();local.assert_not_called()
+        self.assertIsNone(self.app.page_path(job['id']))
+
+    def test_review_api_failure_keeps_valid_page_without_more_generation(self):
+        self.configure();job=self.job();runner=job['runner']
+        with patch.object(runner,'generate',return_value=(HTML,{'finish':'stop'})) as generate,patch.object(runner,'review',side_effect=ProviderError('OpenAI API returned 400')),patch.object(runner,'patch') as repair,patch.object(self.app.engine,'generate') as local,patch.object(self.app,'wait_render'):
+            self.app.run_job(job)
+        self.assertEqual(job['state'],'done',job['error'])
+        self.assertTrue(job['result']['review']['unavailable'])
+        self.assertIn('400',job['result']['review']['summary'])
+        self.assertIn('The Library',self.app.load_page(job['id'])['html'])
+        self.assertEqual(self.app.pages[0]['id'],job['id'])
+        generate.assert_called_once();repair.assert_not_called();local.assert_not_called()
+
+    def test_targeted_patch_api_failure_keeps_original_page(self):
+        self.configure();job=self.job();runner=job['runner']
+        review={'issues':[{'severity':'error','detail':'Fix a spelling mistake'}],'summary':'One issue','visual':False}
+        with patch.object(runner,'generate',return_value=(HTML,{'finish':'stop'})) as generate,patch.object(runner,'review',return_value=review),patch.object(runner,'patch',side_effect=ProviderError('OpenAI API returned 400')) as repair,patch.object(self.app,'wait_render'):
+            self.app.run_job(job)
+        self.assertEqual(job['state'],'done',job['error'])
+        self.assertFalse(job['result']['repaired'])
+        self.assertIn('original retained',job['result']['review']['summary'])
+        self.assertIn('The Library',self.app.load_page(job['id'])['html'])
+        generate.assert_called_once();repair.assert_called_once()
+
+    def test_review_failure_does_not_bypass_failed_layout(self):
+        self.configure();job=self.job();runner=job['runner']
+        def overflow(_):job['layout']={'overflow':True,'width':625}
+        with patch.object(runner,'generate',return_value=(HTML,{'finish':'stop'})) as generate,patch.object(runner,'review',side_effect=ProviderError('API returned 400')),patch.object(self.app,'wait_render',side_effect=overflow):
+            self.app.run_job(job)
+        self.assertEqual(job['state'],'error')
+        self.assertIn('layout or structure',job['error'])
+        self.assertEqual(generate.call_count,2)
+        self.assertIsNone(self.app.page_path(job['id']))
+
+    def test_cancellation_during_review_does_not_save_page(self):
+        self.configure();job=self.job();runner=job['runner']
+        with patch.object(runner,'generate',return_value=(HTML,{'finish':'stop'})),patch.object(runner,'review',side_effect=Cancelled()),patch.object(self.app,'wait_render'):
+            self.app.run_job(job)
+        self.assertEqual(job['state'],'cancelled')
         self.assertIsNone(self.app.page_path(job['id']))
 
     def test_invalid_route_missing_consent_and_key_are_rejected(self):

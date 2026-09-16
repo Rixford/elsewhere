@@ -48,7 +48,7 @@ function showPage(page, job=null, revision=0) {
 function renderSaved() {
   const page=saved();state.displayed=null;
   $('error').hidden=true;$('loading').hidden=true;$('review-chip').hidden=true;
-  if(page){showPage(page);$('page-status').textContent=`Imagined in ${page.seconds}s · ${state.status?.bookmarks?.some(p=>p.id===page.id)?'bookmarked':'cached'}`;}
+  if(page){showPage(page);$('page-status').textContent=`Imagined in ${page.seconds}s · ${state.status?.bookmarks?.some(p=>p.id===page.id)?'bookmarked':'cached'}${page.review?.unavailable?' · review unavailable':''}`;}
   else{$('page').hidden=true;$('page').removeAttribute('srcdoc');$('blank').hidden=false;$('address').value='';$('imagined-label').hidden=true;$('page-status').textContent='A blank page. An open possibility.';}
   drawTabs();
 }
@@ -114,7 +114,7 @@ async function pollJob(id) {
       const tab=state.tabs.find(t=>t.id===state.jobTab);
       if(tab){job.result.viewState=state.displayed?.job===id?state.displayed.page.viewState:job.page?.viewState;tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(job.result);tab.index=tab.pages.length-1;}
       state.job=null;state.jobTab=null;state.progress=null;$('stop').hidden=true;
-      if(visible)renderSaved();drawTabs();refreshStatus();followQueued(job.result.id);return;
+      if(visible)renderSaved();if(job.result.review?.unavailable)toast('Page saved. Automated review was unavailable; see Page details.');drawTabs();refreshStatus();followQueued(job.result.id);return;
     }
     if(job.state==='error'||job.state==='cancelled') {
       const owner=state.tabs.find(t=>t.id===state.jobTab);

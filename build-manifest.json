@@ -13,15 +13,15 @@
   },
   {
     "File": "backend.py",
-    "Hash": "9a468ea749360ec656876b155744330a8204a4c9202c42027b6b9de4ce0d282b"
+    "Hash": "28867dbb61c18cdf1a2df591baa5a13cb6acc350e02a5085a8c9ae6dd5cf235a"
   },
   {
     "File": "CHANGELOG.md",
-    "Hash": "98901cda1f5cd3f923ed7f509222de8069ff12277dd46cc372915973e33bf2b0"
+    "Hash": "8b884b086d7c9e5f10c836f959d8a152c2aff6f1e7286b2303e056a0da4fe031"
   },
   {
     "File": "cloud.py",
-    "Hash": "29157701f811fec62d72c6f40e320fac5e4ec19b0432caf0664d3282ff2bb23c"
+    "Hash": "2ac5c6c6ee369eec1e0c7cca3550a6afb8adde390e4446968c55ca1faf1c5147"
   },
   {
     "File": "Elsewhere.ico",
@@ -29,7 +29,7 @@
   },
   {
     "File": "engine.py",
-    "Hash": "22a5d3e5a8f024e767a7e2871e0b63a23f8a13c2eabbe6f229ad50d9b6cb5b45"
+    "Hash": "5fc8e4c340d3692eb164e086f7bcf97a76b6d8e75917e9cdc23d7a07df981568"
   },
   {
     "File": "LICENSE",
@@ -41,7 +41,7 @@
   },
   {
     "File": "README.md",
-    "Hash": "349528b7b64f48c9ab87752a70e89d1f3881c140d7ed82919917f1eb071619cb"
+    "Hash": "386d54f1240939afe865620f3a06895db7b92f2160d979306f0757fde6992ecd"
   },
   {
     "File": "requirements.txt",
@@ -69,7 +69,7 @@
   },
   {
     "File": "test_cloud.py",
-    "Hash": "e753147ea497c8310bf2cc3c1e825d07560d1beb71c263b4a89a4c37bdbeb0c0"
+    "Hash": "c466ad5c607b6b2bccaf49b9b0f9814aaa121a3d53007edc930972f978682c3c"
   },
   {
     "File": "test_core.py",
@@ -77,7 +77,7 @@
   },
   {
     "File": "test_ui.cjs",
-    "Hash": "d22a6c5acb275f659dee8ff142d78b84fba42ac88e82c216c517e443844d7a1a"
+    "Hash": "37c1bfb8a12eaa4161d39ea2df61289e5e8c7d6a8948bd4252657e30d607face"
   },
   {
     "File": "THIRD_PARTY.md",
@@ -85,7 +85,7 @@
   },
   {
     "File": "VALIDATION.md",
-    "Hash": "9a8ec01e8ab3bb7c60e09479d143bf9dc0613e44745f0c8abda9d029a2638f22"
+    "Hash": "cd75b006042e40a01268d306e4f2e2f4d7ec672594d49f52c8b359d5304a2e1a"
   },
   {
     "File": "web/app.css",
@@ -93,7 +93,7 @@
   },
   {
     "File": "web/app.js",
-    "Hash": "2b00b2382fdfea6d8f41604eeca64673cb57b5c93bd0ce791853dfce8feed920"
+    "Hash": "ebd424b6187ea5b627712041afb7b5bf3bbf57cc5fe4df55dcebefeaa12291a3"
   },
   {
     "File": "web/index.html",

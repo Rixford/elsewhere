@@ -15,7 +15,11 @@ HOSTS = {'openai': ('api.openai.com', '/v1/responses'), 'anthropic': ('api.anthr
 
 
 class ProviderError(RuntimeError):
-    """Provider errors/refusals stop the pipeline; never retry with another model."""
+    """A technical API failure. Never retry automatically with another model."""
+
+
+class ProviderRefusal(ProviderError):
+    """An explicit provider refusal must remain terminal, including in review."""
 
 
 def checked_route(body, keys):
@@ -76,7 +80,9 @@ class CloudEngine(Engine):
         if self.provider=='openai':
             payload={'model':self.model,'instructions':system,'input':converted,'stream':True,'store':False,'max_output_tokens':budget}
             if self.model.startswith(('gpt-5','gpt-6')): payload['reasoning']={'effort':'low'}
-            if json_output: payload['text']={'format':{'type':'json_object'}}
+            if json_output:
+                if not isinstance(json_output,dict): raise ValueError('Structured output requires an explicit schema.')
+                payload['text']={'format':{'type':'json_schema','name':'elsewhere_result','strict':True,'schema':json_output}}
             return payload
         return {'model':self.model,'system':system,'messages':converted,'stream':True,'max_tokens':budget}
 
@@ -114,7 +120,18 @@ class CloudEngine(Engine):
                 response=conn.getresponse()
                 if response.status!=200:
                     hints={400:'Check the model ID and its supported features.',401:'Check your API key.',403:'This key does not have access to the requested model.',404:'This model is unavailable to your account.',429:'Rate limit or API credit limit reached. Wait or check provider billing.'}
-                    raise ProviderError(f'{self.provider.title()} API returned {response.status}. '+hints.get(response.status,'The provider could not complete the request. Try again later.'))
+                    # Keep diagnostic codes/parameter names, never raw bodies that
+                    # may echo credentials, page text or image data.
+                    diagnostic=[]
+                    try:
+                        error=json.loads(response.read(16000)).get('error',{})
+                        for field in ('code','param','type'):
+                            value=error.get(field)
+                            if isinstance(value,str) and self.key not in value and re.fullmatch(r'[A-Za-z0-9_.\[\]-]{1,100}',value): diagnostic.append(field+'='+value)
+                    except (ValueError,AttributeError): pass
+                    detail=' ['+', '.join(diagnostic)+']' if diagnostic else ''
+                    name='OpenAI' if self.provider=='openai' else 'Claude'
+                    raise ProviderError(f'{name} API returned {response.status}{detail}. '+hints.get(response.status,'The provider could not complete the request. Try again later.'))
                 event_lines=[]
                 while True:
                     if cancel.is_set(): raise Cancelled()
@@ -133,12 +150,12 @@ class CloudEngine(Engine):
                         raise ProviderError('The provider stopped this request. Check your model access, quota or provider status.')
                     if self.provider=='openai':
                         if kind.startswith('response.refusal'):
-                            raise ProviderError('OpenAI declined this request. It was not retried or sent to another model.')
+                            raise ProviderRefusal('OpenAI declined this request. It was not retried or sent to another model.')
                         if kind=='response.output_text.delta': text=event.get('delta','')
                         if kind in ('response.completed','response.incomplete'):
                             final=event.get('response',{})
                             if any(block.get('type')=='refusal' for item in final.get('output',[]) for block in item.get('content',[])):
-                                raise ProviderError('OpenAI declined this request. It was not retried or sent to another model.')
+                                raise ProviderRefusal('OpenAI declined this request. It was not retried or sent to another model.')
                             if kind=='response.incomplete':
                                 raise ProviderError('OpenAI could not finish within the output limit. Try a shorter page request.')
                             usage=final.get('usage',{})
@@ -150,11 +167,12 @@ class CloudEngine(Engine):
                         details=delta.get('stop_details') or event.get('stop_details') or event.get('message',{}).get('stop_details') or {}
                         refusal=event.get('refusal') or event.get('message',{}).get('refusal') or delta.get('refusal') or details.get('type')=='refusal'
                         if refusal or event.get('content_block',{}).get('type')=='refusal':
-                            raise ProviderError('Claude declined this request. It was not retried or sent to another model.')
+                            raise ProviderRefusal('Claude declined this request. It was not retried or sent to another model.')
                         if kind=='content_block_delta' and delta.get('type')=='text_delta': text=delta.get('text','')
                         if kind=='message_start': usage.update(event.get('message',{}).get('usage',{}))
                         if kind=='message_delta':
                             reason=delta.get('stop_reason')
+                            if reason=='refusal': raise ProviderRefusal('Claude declined this request. It was not retried or sent to another model.')
                             if reason and reason not in ('end_turn','stop_sequence'):
                                 raise ProviderError('Claude did not complete the page ('+str(reason)[:40]+'). The request was not retried.')
                             if reason: finish='stop'

@@ -1,3 +1,10 @@
+# Completed-page retention after cloud review failure
+
+- 47 Python tests and eleven JavaScript regression scenarios pass, along with JavaScript syntax and diff checks. New cases cover review HTTP 400 retention/cache/history, failed targeted refinement retaining original HTML, failed layout still being rejected, cancellation and explicit refusal remaining terminal, strict schema payloads, and API diagnostics excluding raw error messages/credentials.
+- The shell regression confirms a completed page remains visible with a review-unavailable notice and survives Back/Forward navigation.
+- Two live saved OpenAI traces showed completed generation and successful wide/narrow layout checks followed by review HTTP 400. Their completed snapshots were recovered into local History without inference requests; original traces were preserved. Restart is required for the running app to load recovered history and the code changes.
+- The original API error bodies were not retained, so the exact rejected parameter is unknown. The new OpenAI review format follows official Structured Outputs documentation, but paid endpoint acceptance has not been re-tested with a live key. Tests use mocked official wire formats and temporary data.
+
 # Browser dark-theme correction
 
 - All ten JavaScript regression scenarios and the script syntax check pass. The existing theme check now covers chrome, panels and status bar, persistence while switching/closing panels, and return to light mode.

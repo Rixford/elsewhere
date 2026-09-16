@@ -121,6 +121,19 @@ async function main(){
   assert.equal(calls.filter(c=>c.url==='/api/generate').at(-1).body.parent,'reviewed');
   console.log('PASS: a review-time link follows its completed parent after switching away');
 
+  vm.runInContext("state.job='review-outage';state.jobTab='tab-two';state.queued=null;state.pending=[];state.progress=null",context);
+  responses.set('/api/jobs/review-outage',{state:'done',stage:'Done',revision:1,result:{id:'kept-output',title:'Kept output',html:'kept output',capability:'kept',seconds:42,review:{unavailable:true,summary:'API returned 400'}}});
+  await vm.runInContext("pollJob('review-outage')",context);
+  assert.equal(vm.runInContext('saved().id',context),'kept-output');
+  assert.equal(vm.runInContext('state.displayed.page.id',context),'kept-output');
+  assert.match(elements.get('page-status').textContent,/review unavailable/);
+  assert.equal(elements.get('error').hidden,true);
+  await context.document.getElementById('back').onclick();
+  await context.document.getElementById('forward').onclick();
+  assert.equal(vm.runInContext('saved().id',context),'kept-output');
+  assert.match(elements.get('page-status').textContent,/review unavailable/);
+  console.log('PASS: review outage retains the completed page and a persistent notice through navigation');
+
   vm.runInContext("state.status={settings:{dark_settings:true},router:{provider:'local',presets:{openai:['gpt-6-astra'],anthropic:['claude-opus-5']},keys:{}}};state.panel=null;showSettings()",context);
   assert.equal(elements.get('panel').attributes['data-dark'],'true');
   assert.equal(elements.get('chrome').attributes['data-dark'],'true');
