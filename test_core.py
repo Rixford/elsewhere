@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import html5lib
 
-from backend import App
+from backend import App, site_identity
 from sanitize import sanitize, stylesheet, declarations
 
 BASE='<h1>Expedition</h1><p><strong>Mission:</strong> Rescue the last library in the dunes and bring its stories home.</p>'
@@ -69,6 +69,70 @@ class DocumentTests(unittest.TestCase):
         with self.assertRaises(ValueError):sanitize(BASE+'<div>'*60+'nested'+'</div>'*60)
 
 class ApiTests(unittest.TestCase):
+    def store_page(self, pid, prompt, world='bruceleequotes.com', site=None):
+        page={**sanitize('<style>body{color:gold}</style>'+BASE),'id':pid,'prompt':prompt,'world':world,'capability':'test-cap'}
+        if site is not None: page['site']=site
+        (self.app.data/'cache'/f'{pid}.json').write_text(json.dumps(page),encoding='utf-8')
+        return page
+
+    def begin_without_worker(self, body):
+        from unittest.mock import patch
+        self.app.engine.state='ready'
+        with patch('backend.threading.Thread.start'):
+            result=self.app.start_job(body)
+        self.app.active=None
+        return self.app.jobs[result['id']]
+
+    def test_descendants_keep_seed_identity_and_clicked_topic(self):
+        root=self.store_page('1'*32,'bruceleequotes.com')
+        identity=site_identity(root)
+        self.assertIn('color:gold',identity['style_css'])
+        child=self.store_page('2'*32,'Martial arts',site=identity)
+        self.app.domains['bruceleequotes.com']={'title':'Unrelated sibling'}
+        link={'label':'Metaphysics','destination':'/','excerpt':'Bruce Lee on being and becoming.'}
+        job=self.begin_without_worker({'prompt':'Metaphysics','parent':child['id'],'link':link})
+        self.assertEqual(job['context']['site'],identity)
+        self.assertEqual(job['context']['clicked_link'],link)
+        self.assertEqual(job['context']['previous_entry'],'Martial arts')
+        self.assertEqual(job['world'],'bruceleequotes.com')
+        # The snapshot is independent of later branch mutations.
+        identity['title']='Changed'
+        self.assertNotEqual(job['context']['site']['title'],'Changed')
+
+    def test_legacy_descendant_recovers_seed(self):
+        root=self.store_page('1'*32,'bruceleequotes.com')
+        child=self.store_page('2'*32,'Metaphysics')
+        old=self.store_page('3'*32,'bruceleequotes.com')
+        self.app.pages=[child,root,old]
+        job=self.begin_without_worker({'prompt':'Growth','parent':child['id']})
+        self.assertEqual(job['context']['site']['root_page'],root['id'])
+        self.assertEqual(job['context']['previous_entry'],'Metaphysics')
+
+    def test_bookmarked_child_carries_seed_after_backend_restart(self):
+        from unittest.mock import patch
+        root=self.store_page('1'*32,'bruceleequotes.com')
+        self.app.settings.update(review=False,visual=False)
+        job=self.begin_without_worker({'prompt':'Metaphysics','parent':root['id']})
+        with patch.object(self.app.engine,'generate',return_value=(BASE,{'finish':'stop'})), patch.object(self.app,'wait_render'):
+            self.app.run_job(job)
+        self.assertEqual(job['state'],'done',job['error'])
+        self.assertEqual(job['result']['site']['root_page'],root['id'])
+        self.app.bookmark(job['id'],True)
+        self.app.stop()
+        self.app=App(self.app.data,start_engine=False)
+        onward=self.begin_without_worker({'prompt':'Being and becoming','parent':job['id']})
+        self.assertEqual(onward['context']['site']['root_page'],root['id'])
+        self.assertEqual(onward['context']['previous_entry'],'Metaphysics')
+
+    def test_external_link_and_memory_off_start_independent_pages(self):
+        root=self.store_page('1'*32,'bruceleequotes.com')
+        job=self.begin_without_worker({'prompt':'Search','parent':root['id'],'link':{'destination':'https://google.com/'}})
+        self.assertIsNone(job['context'])
+        self.assertEqual(job['world'],'google.com')
+        self.app.settings['memory']=False
+        job=self.begin_without_worker({'prompt':'Metaphysics','parent':root['id']})
+        self.assertIsNone(job['context'])
+
     def test_bookmark_survives_cache_expiry_and_unbookmark_keeps_back(self):
         import os,time
         pid='b'*32

@@ -22,6 +22,14 @@ def atomic_json(path, value):
     tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
     tmp.replace(path)
 
+def site_identity(page):
+    """An immutable seed carried by descendants, independent of recent siblings."""
+    if isinstance(page.get('site'),dict): return copy.deepcopy(page['site'])
+    css=re.findall(r'<style[^>]*>(.*?)</style>',page.get('html',''),re.S|re.I)
+    # Saved HTML begins with host defaults; the model's CSS follows them.
+    return {'root_page':page.get('id'),'entry':page.get('prompt',''),'title':page.get('title',''),
+            'content':page.get('text','')[:3000], 'style_css':'\n'.join(css[1:] if len(css)>1 else css)[:3000]}
+
 class App:
     def __init__(self, data, start_engine=True):
         self.data = Path(data)
@@ -144,9 +152,35 @@ class App:
             key = domain or (parent.get('world') if parent else 'world-' + uuid.uuid4().hex[:12])
             # A fresh address should recall the model's associations, not inherit an
             # unrelated interpretation previously saved for that domain.
-            context = self.domains.get(key) if self.settings['memory'] and parent else None
+            context = None
             if parent:
-                context = {'previous_entry':parent['prompt'],'previous_title':parent['title'],'previous_content':parent.get('text','')[:2500], 'world_notes':context}
+                root=parent
+                root_entries=(str(key).lower(), 'https://'+str(key).lower(), 'http://'+str(key).lower())
+                if not parent.get('site') and parent.get('prompt','').lower().rstrip('/') not in root_entries:
+                    # Recover the seed for pre-update pages where only the world
+                    # domain survived, rather than promoting a drifting child.
+                    for item in self.pages:
+                        if item.get('created',0)>parent.get('created',float('inf')): continue
+                        if str(item.get('prompt','')).lower().rstrip('/') in root_entries:
+                            try: root=self.load_page(item['id'])
+                            except (ValueError,OSError): pass
+                            else: break
+                link=body.get('link') or {}
+                if not isinstance(link,dict): raise ValueError('Expected link context.')
+                link={k:v[:limit] for k,limit in [('label',200),('destination',500),('excerpt',1000)] if isinstance((v:=link.get(k)),str)}
+                context = {'site':site_identity(root),'previous_entry':parent['prompt'],'previous_title':parent['title'],'previous_content':parent.get('text','')[:1800], 'clicked_link':link}
+                destination=link.get('destination','')
+                linked_domain=None
+                if re.match(r'^https?://',destination,re.I):
+                    try: linked_domain=urlsplit(destination).hostname
+                    except ValueError: pass
+                # An explicit external destination starts another imagined site.
+                external=linked_domain or domain
+                if external and external!=parent.get('world'):
+                    context=None
+                    key=external
+                    if linked_domain and not domain: entry=f'{destination} — {entry}'
+                else: key=parent.get('world') or key
             seed = body.get('seed')
             if not isinstance(seed,int) or not 0 <= seed <= 2147483647:
                 seed = secrets.randbelow(2147483647)
@@ -246,6 +280,8 @@ class App:
             if job['cancel'].is_set(): raise Cancelled()
             if not page: raise ValueError('No usable page was produced.')
             result = {**page,'id':job['id'],'prompt':job['prompt'],'world':job['world'],'seed':job['seed'],'created':time.time(),'seconds':round(time.time()-job['started'],1),'review':job['review'],'repaired':job['repair'],'settings':job['settings'],'layout':job['layout']}
+            result['site']=copy.deepcopy(job['context']['site']) if job['context'] else site_identity(result)
+            result['parent']=job['context']['previous_entry'] if job['context'] else None
             with self.lock:
                 if job['cancel'].is_set(): raise Cancelled()
                 atomic_json(self.data/'cache'/f"{job['id']}.json",result)

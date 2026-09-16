@@ -1,5 +1,11 @@
 # Local update after rev0
 
+- Carry an immutable seed-site identity, content excerpt and style through descendant pages; include the clicked label, destination and nearby text instead of treating generic paths as the topic.
+- Recover the nearest preceding seed for older domain-based pages where available; keep fresh address entries independent.
+- Keep active generation and its preview attached to the originating tab while other tabs remain usable.
+- Queue generation requests from other tabs without cancelling active work; preserve review-time navigation when switching away.
+- Opening history or bookmarks in another tab no longer stops active generation. Background completion does not steal focus.
+- Retain tab elements across unchanged status polls so clicks and keyboard focus are not disrupted.
 - Add permanent bookmarks (star / Ctrl+D) and a bookmarks panel.
 - Store new pages in a 24-hour cache; preserve the older archive and bookmark snapshots.
 - Restore page scroll, ordinary form values and expanded sections with Back/Forward.

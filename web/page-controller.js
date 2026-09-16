@@ -83,10 +83,14 @@
       const target = document.getElementById(el.dataset.anchor.slice(1));
       if (target) { target.scrollIntoView({behavior: 'smooth'}); return; }
     }
-    const prompt = intent(el);
+    const label=(el.getAttribute('aria-label')||el.textContent.trim()||el.value||'').slice(0,200);
+    const destination=(el.dataset.intent||'').slice(0,500);
+    const nearby=el.closest('article,section,li,p')||el.parentElement;
+    const link={label,destination,excerpt:(nearby?.textContent||'').trim().slice(0,1000)};
+    const prompt = el.dataset.prompt || label || intent(el);
     if (!prompt) return;
     if (parent === window) { note('Open this page in Elsewhere to imagine the next destination.'); return; }
-    send('navigate', {prompt, label: el.textContent.trim().slice(0,200),view:viewState()});
+    send('navigate', {prompt, label,link,view:viewState()});
   });
   document.addEventListener('submit', event => {
     event.preventDefault();
@@ -94,7 +98,7 @@
     const terms = [...form.querySelectorAll('input,textarea,select')].filter(el => !el.disabled && ['text','search','textarea','select-one','number','date'].includes(el.type) && el.value.trim()).map(el => ((el.name || el.getAttribute('aria-label') || el.placeholder || 'Input') + ': ' + el.value.trim()).slice(0,300));
     const action = (event.submitter && intent(event.submitter)) || form.dataset.prompt || form.getAttribute('aria-label') || 'Explore';
     if (parent === window) { note('Open this page in Elsewhere to continue.'); return; }
-    if (terms.length || event.submitter) send('navigate', {prompt: [action,...terms].join(' — ').slice(0,600), label: action,view:viewState()});
+    if (terms.length || event.submitter) send('navigate', {prompt: [action,...terms].join(' — ').slice(0,600), label: action,link:{label:action,excerpt:form.textContent.trim().slice(0,1000)},view:viewState()});
     else note('This is a local simulation. Nothing was submitted.');
   });
   document.addEventListener('input', event => {

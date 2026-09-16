@@ -9,7 +9,7 @@
   },
   {
     "File": "CHANGELOG.md",
-    "Hash": "f8c457be28cd94e1ee1947f903f79ac8d0f41d21c6b4d0bb28dad048a727b3fd"
+    "Hash": "84baac6c1aeea4c21a9b9bbe7df63ad7ef94e5458a703d9fec30ef6b9f59958b"
   },
   {
     "File": "Elsewhere.ico",
@@ -21,7 +21,7 @@
   },
   {
     "File": "README.md",
-    "Hash": "fc20ce39df1c28c91cc4d538dfd87c220c89796051730f2bd6ab5cd174c6afc6"
+    "Hash": "e921d177b2d73211856e515c3ef692142325a8dc3f3537fd0d2077fb3194e2b5"
   },
   {
     "File": "Setup Elsewhere.cmd",
@@ -37,7 +37,7 @@
   },
   {
     "File": "VALIDATION.md",
-    "Hash": "2908de49f196119aba18fbb759471fe3170100844a42baff06968f496682c0a4"
+    "Hash": "98a7f616217a240482ef3bc5e360a5b90eed7bcb75dabbb9e5cbf6a7f5d96eff"
   },
   {
     "File": "app.py",
@@ -45,11 +45,11 @@
   },
   {
     "File": "backend.py",
-    "Hash": "0736dc39318e364e4b5792dc26b034f4ccf77c470a2401d005f5f2f67189bb3a"
+    "Hash": "4da38ea19b18aedecc87db0535310050498ac6eaad22495300cfce5af4d3e559"
   },
   {
     "File": "engine.py",
-    "Hash": "1a902ee114c36b7fc814ae3501492e2d7bdd254125f90e7fa032c2e264075899"
+    "Hash": "22a5d3e5a8f024e767a7e2871e0b63a23f8a13c2eabbe6f229ad50d9b6cb5b45"
   },
   {
     "File": "make_icon.py",
@@ -73,11 +73,11 @@
   },
   {
     "File": "test_core.py",
-    "Hash": "a82b4c5522a58ead1264aa7ae1013b7d7763c551ca923dc74b9e58b76f860405"
+    "Hash": "2ddddb66cd2c51afa5c256f5a609d1045a4258b18cabbb6a43d4aefd2611d571"
   },
   {
     "File": "test_ui.cjs",
-    "Hash": "bc54578475e20b5c01ca69758e116095759047c7e8c898e968b65046c4b78bc3"
+    "Hash": "daadb02c057c891d90df19d83b6eb1f3099e8d0c10b1c3cbb047b77735f5f5cd"
   },
   {
     "File": "web/app.css",
@@ -85,7 +85,7 @@
   },
   {
     "File": "web/app.js",
-    "Hash": "fd58d730b4f793a605ddf0a4937994d0239b5fc0b39193d2c6c4aaea879c0729"
+    "Hash": "b46695313c1e6774b14d6ecd94e75fe8d7bfce62cf7443220df5bd97560232f5"
   },
   {
     "File": "web/index.html",
@@ -93,6 +93,6 @@
   },
   {
     "File": "web/page-controller.js",
-    "Hash": "2ef04d1a380f5b0b76f9851e32ce0bd741874a681c2e0997497fa5e37c39a5f3"
+    "Hash": "0d7c2245430f5f874eca3ad72039b4e17836da545306961bfafc1b2c31d463e3"
   }
 ]

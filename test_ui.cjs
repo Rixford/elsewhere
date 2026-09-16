@@ -12,6 +12,8 @@ const elements=new Map();
 const listeners=new Map();
 const calls=[];
 let resolveCancel;
+const responses=new Map();
+let nextJob=0;
 const context=vm.createContext({
   console,crypto:{randomUUID:()=> 'tab-one'},location:{hash:'#token'},history:{replaceState(){}},
   document:{getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id);},createElement(){return new Element();},addEventListener(){}},
@@ -20,6 +22,8 @@ const context=vm.createContext({
   fetch:async(url,options)=>{
     calls.push({url,body:options.body?JSON.parse(options.body):null});
     if(url==='/api/cancel')return new Promise(resolve=>{resolveCancel=()=>resolve({ok:true,json:async()=>({stopped:true})});});
+    if(responses.has(url))return {ok:true,json:async()=>responses.get(url)};
+    if(url==='/api/generate')return {ok:true,json:async()=>({id:'generated-'+(++nextJob)})};
     return {ok:true,json:async()=>({engine:'ready',settings:{},history:[]})};
   }
 });
@@ -64,5 +68,57 @@ async function main(){
   assert.equal(vm.runInContext('current().index',context),1);
   assert.equal(calls.filter(c=>c.url==='/api/generate').length,before);
   console.log('PASS: Back and Forward restore cache without model calls');
+
+  vm.runInContext("state.tabs.push({id:'tab-two',pages:[],index:-1});state.job='building';state.jobTab='tab-one';state.lastPrompt='First page';state.progress={stage:'Reviewing',revision:1,page:{id:'draft',html:'draft',capability:'draft'}};state.displayed=null",context);
+  const cancels=calls.filter(c=>c.url==='/api/cancel').length;
+  await vm.runInContext("switchTab('tab-two')",context);
+  assert.equal(vm.runInContext('state.current',context),'tab-two');
+  assert.equal(vm.runInContext('state.job',context),'building');
+  await vm.runInContext("switchTab('tab-one')",context);
+  assert.equal(vm.runInContext('state.displayed.page.id',context),'draft');
+  await vm.runInContext("switchTab('tab-two')",context);
+  responses.set('/api/pages/bookmark',{id:'bookmark',title:'Bookmarked',html:'saved',capability:'bookmark'});
+  await vm.runInContext("openSavedPage('bookmark')",context);
+  assert.equal(vm.runInContext('saved().id',context),'bookmark');
+  assert.equal(vm.runInContext('state.job',context),'building');
+  assert.equal(calls.filter(c=>c.url==='/api/cancel').length,cancels);
+  console.log('PASS: switching tabs and opening bookmarks never cancel another tab');
+
+  const generations=calls.filter(c=>c.url==='/api/generate').length;
+  await vm.runInContext("navigate('Old topic','bookmark',null,{label:'Old topic'})",context);
+  await vm.runInContext("navigate('Metaphysics','bookmark',null,{label:'Metaphysics',destination:'/'})",context);
+  assert.equal(vm.runInContext('state.pending.length',context),1);
+  assert.equal(vm.runInContext('state.pending[0].prompt',context),'Metaphysics');
+  assert.equal(calls.filter(c=>c.url==='/api/generate').length,generations);
+  responses.set('/api/jobs/building',{state:'done',revision:1,stage:'Done',page:{id:'draft',html:'draft',capability:'draft'},result:{id:'finished',title:'Finished',html:'finished',capability:'finished'}});
+  await vm.runInContext("pollJob('building')",context);
+  await new Promise(resolve=>setImmediate(resolve));
+  const next=calls.filter(c=>c.url==='/api/generate').at(-1);
+  assert.equal(next.body.prompt,'Metaphysics');
+  assert.equal(next.body.parent,'bookmark');
+  assert.equal(next.body.link.destination,'/');
+  assert.equal(vm.runInContext('state.current',context),'tab-two');
+  assert.equal(vm.runInContext('state.tabs[0].pages.at(-1).id',context),'finished');
+  assert.equal(vm.runInContext('state.jobTab',context),'tab-two');
+  console.log('PASS: requests queue per tab and start with their original parent and link');
+
+  await vm.runInContext("switchTab('tab-one')",context);
+  const active=vm.runInContext('state.job',context);
+  responses.set('/api/jobs/'+active,{state:'done',stage:'Done',revision:1,result:{id:'second',title:'Second',html:'second',capability:'second'}});
+  await vm.runInContext('pollJob(state.job)',context);
+  assert.equal(vm.runInContext('state.current',context),'tab-one');
+  assert.equal(vm.runInContext('state.displayed.page.id',context),'finished');
+  assert.equal(vm.runInContext('state.tabs[1].pages.at(-1).id',context),'second');
+  console.log('PASS: background completion keeps the selected tab and visible page');
+
+  vm.runInContext("state.job='review-again';state.jobTab='tab-one';state.queued={prompt:'Deep dive',tab:'tab-one',fromJob:true,link:{label:'Deep dive'}}",context);
+  await vm.runInContext("switchTab('tab-two')",context);
+  responses.set('/api/jobs/review-again',{state:'done',stage:'Done',revision:1,result:{id:'reviewed',title:'Reviewed',html:'reviewed',capability:'reviewed'}});
+  await vm.runInContext("pollJob('review-again')",context);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(vm.runInContext('state.current',context),'tab-two');
+  assert.equal(vm.runInContext('state.jobTab',context),'tab-one');
+  assert.equal(calls.filter(c=>c.url==='/api/generate').at(-1).body.parent,'reviewed');
+  console.log('PASS: a review-time link follows its completed parent after switching away');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

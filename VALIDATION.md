@@ -1,3 +1,12 @@
+# Local continuity/background-tab update validation
+
+- 27 Python tests and eight JavaScript regression scenarios pass; both browser scripts pass syntax checks.
+- Continuity tests cover seed identity/CSS and clicked-topic retention across descendants, sibling isolation, recovery of the nearest available legacy seed, external-domain separation, memory-off behavior, and preservation through a bookmarked child after a backend restart.
+- Shell tests exercise switching during review, opening bookmarks without cancelling another tab, per-tab request replacement and queued parent/link retention, background completion without focus changes, and following a review-time link after switching away.
+- A model-free browser fixture confirmed live preview restoration, queuing a second tab, and browsing/expanding content/opening a dialog while another tab reviewed. Background completion preserved the selected page and expanded content.
+- One live local Qwen3.5-4B generation used the saved seed “The Tao of Steel — Bruce Lee Quotes” and the topic “Metaphysics”. It produced “The Metaphysics of the Void — The Tao of Steel”, retained the site name, and related its content to Bruce Lee and Jeet Kune Do. Generation took 61.12 seconds and passed HTML sanitation without reported issues. This was a direct generator check, not an end-to-end screenshot/layout/reviewer test or a broad semantic benchmark. Output stayed in ignored local test files.
+- Only one model generation/review pipeline runs at a time; queued tabs do not consume additional model copies. Native desktop capture was not changed. Close and reopen Elsewhere to activate the backend changes; leave “Carry the world forward” enabled for continuity.
+
 # Local interaction/cache update validation
 
 - 23 Python tests and four JavaScript regression scenarios pass.

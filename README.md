@@ -17,17 +17,17 @@ After updating source files, close and reopen Elsewhere. Setup does not need to 
 ## Use
 
 - **Address bar / Ctrl+L:** enter a place, idea, phrase, or address.
-- **Links:** continue into another imagined page; local section links scroll within the page. During review, the latest navigation click queues with visible feedback. Switching tabs clears it when review finishes; Stop cancels it.
+- **Links:** continue within the same imagined site, carrying the seed identity/style, the previous page, and the clicked label with nearby text. Local section links scroll within the page. During review, the latest navigation click queues with visible feedback and survives switching tabs; Stop cancels it.
 - **Back / Forward:** restore cached pages without generation, including scroll, ordinary form fields and expanded sections. Back during generation cancels it and returns to the previous page.
 - **Reload / Ctrl+R:** restore the saved page without running the model.
 - **Reimagine:** generate a new interpretation, with a fresh seed.
-- **New tab / Ctrl+T:** open another blank page. Up to eight tabs; one model task at a time.
-- **Stop / Escape:** cancel the current model call and retain the previous page.
+- **New tab / Ctrl+T:** open another blank page. Switch freely while another tab builds; finished pages, history and bookmarks stay usable. Up to eight tabs; one model task at a time. New requests in other tabs queue automatically, with the latest request retained per tab. Completion never switches your selected tab.
+- **Stop / Escape:** cancel the selected tab's model call and retain its previous page. Queued requests in other tabs continue afterward.
 - **History:** reopen recent cached pages and the preserved pre-update archive. New unbookmarked pages expire after 24 hours, cleaned up on a later launch.
 - **Star / Ctrl+D:** bookmark the current finished page permanently on this computer. The Bookmarks button lists saved pages. Click the filled star to return a bookmark to temporary storage.
 - **Page details:** inspect timing, seed, review results, source HTML, and the full generation record. Export saves a standalone HTML file in the local `exports` directory.
 
-The Settings panel controls continuity memory, the validation reviewer, and screenshot review. Turning memory off produces independent interpretations. The reviewer checks presentation and internal consistency only. It must preserve inventions, unusual ideas, and intentional design choices.
+The Settings panel controls continuity memory, the validation reviewer, and screenshot review. Turning memory off produces independent interpretations. With memory on, each new page stores a compact seed-site snapshot that persists through subsequent links, including after reopening a bookmark. Fresh address-bar entries start independent interpretations. Older pages recover the nearest preceding seed for that domain when available. This guides the model; perfect narrative or visual consistency is not guaranteed. The reviewer checks presentation and internal consistency only. It must preserve inventions, unusual ideas, and intentional design choices.
 
 All generated JavaScript is removed. The app supplies a small trusted controller for imagined navigation, local anchors, native details/summary, basic tabs/toggles, local filtering, and simulated forms. No accounts, purchases, or other real submissions take place. Exported HTML retains its appearance and local controls; further imagined navigation requires Elsewhere.
 
