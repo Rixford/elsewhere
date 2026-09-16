@@ -123,6 +123,8 @@ async function main(){
 
   vm.runInContext("state.status={settings:{dark_settings:true},router:{provider:'local',presets:{openai:['gpt-6-astra'],anthropic:['claude-opus-5']},keys:{}}};state.panel=null;showSettings()",context);
   assert.equal(elements.get('panel').attributes['data-dark'],'true');
+  assert.equal(elements.get('chrome').attributes['data-dark'],'true');
+  assert.equal(elements.get('statusbar').attributes['data-dark'],'true');
   const descendants=node=>[node,...node.children.flatMap(descendants)];
   const inputs=descendants(elements.get('panel-content'));
   const password=inputs.find(node=>node.attributes['aria-label']==='API key');
@@ -132,9 +134,13 @@ async function main(){
   assert.ok(inputs.some(node=>node.textContent?.includes('API charges')));
   password.value='transient-test-key';
   vm.runInContext("panel('Recent pages','history')",context);
-  assert.equal(elements.get('panel').attributes['data-dark'],'false');
+  assert.equal(elements.get('panel').attributes['data-dark'],'true');
   assert.ok(!descendants(elements.get('panel-content')).includes(password));
-  console.log('PASS: dark mode is Settings-only and key entry is masked, transient and disclosed');
+  vm.runInContext('closePanel()',context);
+  assert.equal(elements.get('chrome').attributes['data-dark'],'true');
+  vm.runInContext('state.status.settings.dark_settings=false;applySettingsTheme()',context);
+  for(const id of ['chrome','panel','statusbar'])assert.equal(elements.get(id).attributes['data-dark'],'false');
+  console.log('PASS: dark mode covers browser controls across panels; key entry stays masked and transient');
 
   vm.runInContext("state.job=null;state.starting=false;state.stopping=null;state.pending=[];state.tabs=[{id:'tab-one',pages:[{id:'private',title:'Private',html:'private'}],index:0},{id:'tab-two',pages:[{id:'private'},{id:'kept',title:'Kept',html:'kept'}],index:1}];state.current='tab-one';confirmClearHistory()",context);
   assert.equal(calls.filter(c=>c.url==='/api/history/clear').length,0,'opening confirmation must not clear data');

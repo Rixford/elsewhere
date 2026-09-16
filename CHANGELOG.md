@@ -4,7 +4,7 @@
 - Add optional OpenAI Responses and Anthropic Claude Messages routing in Settings; local Qwen remains the default on every launch.
 - Keep API keys in backend session memory only, disclose cloud data transfer and billing, and retain the selected provider/model throughout each job.
 - Handle current streaming formats, Claude workspace headers and structured refusals; keep generated-page network restrictions and never fall back to another provider automatically.
-- Add a persistent dark theme limited to the Settings panel.
+- Add a persistent dark browser theme covering tabs, address bar, panels and status bar, while imagined pages retain their own styling.
 - Carry an immutable seed-site identity, content excerpt and style through descendant pages; include the clicked label, destination and nearby text instead of treating generic paths as the topic.
 - Recover the nearest preceding seed for older domain-based pages where available; keep fresh address entries independent.
 - Keep active generation and its preview attached to the originating tab while other tabs remain usable.

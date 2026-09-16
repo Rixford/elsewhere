@@ -17,7 +17,7 @@
   },
   {
     "File": "CHANGELOG.md",
-    "Hash": "99a32a58853b23d29705468e7601d82dc5e741a1043e0d43446f0cd29f33985b"
+    "Hash": "98901cda1f5cd3f923ed7f509222de8069ff12277dd46cc372915973e33bf2b0"
   },
   {
     "File": "cloud.py",
@@ -41,7 +41,7 @@
   },
   {
     "File": "README.md",
-    "Hash": "b6fffe16eb12cffe39d1f31e503bcaf5d480136359a56978892ff3a335fb48cf"
+    "Hash": "349528b7b64f48c9ab87752a70e89d1f3881c140d7ed82919917f1eb071619cb"
   },
   {
     "File": "requirements.txt",
@@ -77,7 +77,7 @@
   },
   {
     "File": "test_ui.cjs",
-    "Hash": "cd7b8837a5957ffd4e561fb5bf45aa2451a193808c2613536fc6050db785e993"
+    "Hash": "d22a6c5acb275f659dee8ff142d78b84fba42ac88e82c216c517e443844d7a1a"
   },
   {
     "File": "THIRD_PARTY.md",
@@ -85,19 +85,19 @@
   },
   {
     "File": "VALIDATION.md",
-    "Hash": "3cb99221f32848147cfbcf7a1fb41a1e9bc7a8c3aebec02288c90f844d29ddb9"
+    "Hash": "9a8ec01e8ab3bb7c60e09479d143bf9dc0613e44745f0c8abda9d029a2638f22"
   },
   {
     "File": "web/app.css",
-    "Hash": "a4a8304b2a5046902b2bfecaca64e43120dca5e20b9ab3fbc1ae8be7b4442677"
+    "Hash": "fcd34e60a67764f149e0ed471b96a54df3e382e0ca254401dc178b5dd6f98a3c"
   },
   {
     "File": "web/app.js",
-    "Hash": "b796ca60a7cf6b9151646507972bae1752b0ccb778b551c38f514311e0c75d01"
+    "Hash": "2b00b2382fdfea6d8f41604eeca64673cb57b5c93bd0ce791853dfce8feed920"
   },
   {
     "File": "web/index.html",
-    "Hash": "ceff2f133dfa858b3dd0f0eec407c12e5895d5b3634ad587d65fea624fc8487d"
+    "Hash": "9f77bcc8ba7b1b81c8fd5aa967c725540e8c6fbabd2df325a7da059074e3a2d3"
   },
   {
     "File": "web/page-controller.js",

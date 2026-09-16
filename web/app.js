@@ -155,7 +155,7 @@ async function refreshStatus() {
     $('go').disabled=!ready;drawTabs();
   }catch(error){$('engine-status').textContent='Disconnected';}
 }
-function applySettingsTheme(){$('panel').setAttribute('data-dark',String(state.panel==='settings'&&!!state.status?.settings.dark_settings));}
+function applySettingsTheme(){const dark=String(!!state.status?.settings.dark_settings);for(const id of ['chrome','panel','statusbar'])$(id).setAttribute('data-dark',dark);}
 function closePanel(){$('panel').hidden=true;$('panel-content').replaceChildren();state.panel=null;applySettingsTheme();}
 function panel(title,kind){state.panel=kind;$('panel').hidden=false;$('panel-title').textContent=title;$('panel-content').replaceChildren();applySettingsTheme();return $('panel-content');}
 function paragraph(parent,text,cls='panel-note'){const p=document.createElement('p');p.className=cls;p.textContent=text;parent.append(p);return p;}
@@ -213,7 +213,7 @@ function modelSettings(content){
 }
 function showSettings(){if(state.panel==='settings'){closePanel();return;}const content=panel('Settings','settings');
   modelSettings(content);
-  for(const [key,title,description] of [['dark_settings','Dark settings panel','Use a dark theme here. Imagined pages keep their own design.'],['memory','Carry the world forward','Remember an imagined place’s details as you follow its links. Turn off for independent interpretations.'],['review','Validation reviewer','Check language and structure with a separate model call. The reviewer preserves invented content.'],['visual','Look at the page','Include a screenshot in the review. With a cloud model, this image is sent to that provider. Requires this tab to be visible.']]){
+  for(const [key,title,description] of [['dark_settings','Dark browser interface','Use dark tabs, address bar, panels and status bar. Imagined pages keep their own design.'],['memory','Carry the world forward','Remember an imagined place’s details as you follow its links. Turn off for independent interpretations.'],['review','Validation reviewer','Check language and structure with a separate model call. The reviewer preserves invented content.'],['visual','Look at the page','Include a screenshot in the review. With a cloud model, this image is sent to that provider. Requires this tab to be visible.']]){
     const label=document.createElement('label');label.className='setting';const copy=document.createElement('span');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=description;copy.append(strong,small);const input=document.createElement('input');input.type='checkbox';input.checked=!!state.status?.settings[key];input.onchange=async()=>{try{state.status.settings=await api('settings',{[key]:input.checked});applySettingsTheme();}catch(e){toast(e.message);input.checked=!input.checked;}};label.append(copy,input);content.append(label);
   }
   paragraph(content,'Everything you enter is a creative prompt. Addresses never contact a real website. Code checks always run. Changes apply to the next page.');

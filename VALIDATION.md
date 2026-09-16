@@ -1,3 +1,8 @@
+# Browser dark-theme correction
+
+- All ten JavaScript regression scenarios and the script syntax check pass. The existing theme check now covers chrome, panels and status bar, persistence while switching/closing panels, and return to light mode.
+- Visually verified the address bar, focused input, active/inactive tabs and status bar in an isolated browser fixture after closing Settings. Generated-document styling is untouched. Existing saved dark preferences apply to the expanded theme automatically.
+
 # Clear-history option validation
 
 - Added two Python checks for confirmed/authenticated deletion, rejection while a worker is running, removal of cache/archive snapshots and traces, and bookmark/export retention after restart. Existing Python checks also passed (41 tests total).
