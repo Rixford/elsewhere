@@ -23,3 +23,11 @@ webview/
 .local/
 cache/
 bookmarks/
+logs/
+instance.lock
+credentials*.json
+secrets*.json
+*.pem
+*.key
+*.pfx
+*.p12

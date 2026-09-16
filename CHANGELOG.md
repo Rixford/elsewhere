@@ -1,5 +1,6 @@
 # Local update after rev0
 
+- Add portable setup/preference examples, privacy and safe-sharing guidance, and reusable launch-post drafts. Extend Git exclusions for common credential and diagnostic files.
 - Preserve usable generated pages when optional cloud review or targeted refinement has a technical failure; report unavailable review without discarding the page. Refusals, cancellation and failed final layout checks remain terminal.
 - Use strict OpenAI Structured Outputs schemas for review and targeted edits; record safe API error codes/parameter names and trace pipeline phase/layout for diagnosis.
 - Add History → Clear history with confirmation; delete cached/archived history and traces while preserving bookmarks and exports, and reset tab history. Active generation must finish or stop first.

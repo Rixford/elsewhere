@@ -5,7 +5,7 @@
   },
   {
     "File": ".gitignore",
-    "Hash": "c2064708adf0bea9cbd74ee3ae9669a481b4560cdbcfdc84158d797b09a5caee"
+    "Hash": "4e2a1b1b3f280c3fb6699b33703e84f7ef39fef55c4502df87ba4f3c43bd9195"
   },
   {
     "File": "app.py",
@@ -17,11 +17,15 @@
   },
   {
     "File": "CHANGELOG.md",
-    "Hash": "8b884b086d7c9e5f10c836f959d8a152c2aff6f1e7286b2303e056a0da4fe031"
+    "Hash": "ad64c9595f52eb217ee8b9d93d60794739626de31ce1c70b828503608011b54d"
   },
   {
     "File": "cloud.py",
     "Hash": "2ac5c6c6ee369eec1e0c7cca3550a6afb8adde390e4446968c55ca1faf1c5147"
+  },
+  {
+    "File": "docs/LAUNCH_POSTS.md",
+    "Hash": "aee79a5dadbef96fd4e41e030ffb341dbc4cb32df46be3c1a892dc071256fbad"
   },
   {
     "File": "Elsewhere.ico",
@@ -32,6 +36,14 @@
     "Hash": "5fc8e4c340d3692eb164e086f7bcf97a76b6d8e75917e9cdc23d7a07df981568"
   },
   {
+    "File": "examples/README.md",
+    "Hash": "4ab168e6bc965525d9d514785bf2ecb3d73f95c2132e74dae1f35f676bbfbbe7"
+  },
+  {
+    "File": "examples/settings.example.json",
+    "Hash": "1a3197e9f27916a1497ce55666605e5e2fab7ab5d8031df3ff62acae92bf5733"
+  },
+  {
     "File": "LICENSE",
     "Hash": "124d663b72f1592e29f001985456d523e83d422561c2b3edca80fb10e1e877e0"
   },
@@ -40,8 +52,12 @@
     "Hash": "d4bcd8edac02883d1514e499817c3ced4c98a8bcaf368daf67d0ad979fc975be"
   },
   {
+    "File": "PRIVACY.md",
+    "Hash": "2d566b1fdf9b013a248c365b502c83862013da875da049f91d504bc9daa58350"
+  },
+  {
     "File": "README.md",
-    "Hash": "386d54f1240939afe865620f3a06895db7b92f2160d979306f0757fde6992ecd"
+    "Hash": "4b0334f0c4ca589b1076127557326f30c9c6e775bb46b76b9047a0e7e045d6e3"
   },
   {
     "File": "requirements.txt",
@@ -85,7 +101,7 @@
   },
   {
     "File": "VALIDATION.md",
-    "Hash": "cd75b006042e40a01268d306e4f2e2f4d7ec672594d49f52c8b359d5304a2e1a"
+    "Hash": "8d7cd9ceed5b0c7e01237c15004337f373f8f5aa4dd40c30d9ecd998d8391864"
   },
   {
     "File": "web/app.css",

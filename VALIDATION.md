@@ -1,3 +1,10 @@
+# Public-source preparation
+
+- Inspected the seven existing reachable commits, 88 unique historical file versions, release file inventory and commit attribution before publication. Pattern checks found no personal home-directory paths, private email addresses, recognizable provider credentials or private keys; no generated browsing data or local runtime/configuration files were tracked. The public project handle and GitHub no-reply attribution are retained. This is a scoped source review, not a guarantee that automated patterns detect every kind of secret.
+- Confirmed setup resolves the current user's data directory and the launcher reads the locally generated runtime pointer. Added a credential-free preference example using the four supported boolean settings, with instructions for each user's installation. No model, account, API key or browsing history is bundled.
+- Confirmed ignore rules cover runtime pointers, session/history files, cache/bookmarks, environment files, common credential files and logs. No personal screenshot or recovered page was added to the public source.
+- Re-ran all 47 Python tests, eleven JavaScript regression scenarios and both browser-script syntax checks successfully. The Twitter draft is 276 characters including its full repository URL. The social drafts distinguish local offline operation from cloud API generation and make no benchmark or emergence claims.
+
 # Completed-page retention after cloud review failure
 
 - 47 Python tests and eleven JavaScript regression scenarios pass, along with JavaScript syntax and diff checks. New cases cover review HTTP 400 retention/cache/history, failed targeted refinement retaining original HTML, failed layout still being rejected, cancellation and explicit refusal remaining terminal, strict schema payloads, and API diagnostics excluding raw error messages/credentials.
