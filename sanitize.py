@@ -8,7 +8,7 @@ from pathlib import Path
 import html5lib
 import tinycss2
 
-HTML_TAGS = set('html head body title style main header footer nav section article aside div span p a button h1 h2 h3 h4 h5 h6 ul ol li dl dt dd strong em b i u s small mark code pre blockquote br hr table thead tbody tfoot tr td th caption colgroup col form label input textarea select option optgroup fieldset legend details summary progress meter figure figcaption time sub sup abbr'.split())
+HTML_TAGS = set('html head body title style main header footer nav section article aside div span p a button h1 h2 h3 h4 h5 h6 ul ol li dl dt dd strong em b i u s small mark code pre blockquote br hr table thead tbody tfoot tr td th caption colgroup col form label input textarea select option optgroup fieldset legend details summary dialog progress meter figure figcaption time sub sup abbr'.split())
 SVG_TAGS = set('svg g path rect circle ellipse line polyline polygon text tspan defs linearGradient radialGradient stop clipPath mask pattern symbol use title desc'.split())
 DROP_CONTENT = set('script iframe frame frameset object embed applet noscript template foreignObject animate animateMotion animateTransform set audio video source track canvas math'.lower().split())
 ATTRS = set('id class title role tabindex lang dir hidden aria-label aria-labelledby aria-describedby aria-expanded aria-controls aria-hidden aria-live aria-current aria-selected type name value placeholder checked selected disabled required readonly multiple min max step rows cols for colspan rowspan scope open datetime start reversed width height viewbox preserveaspectratio d x y x1 x2 y1 y2 cx cy r rx ry points fill stroke stroke-width stroke-linecap stroke-linejoin opacity fill-opacity stroke-opacity fill-rule clip-rule transform offset stop-color stop-opacity gradientunits gradienttransform patternunits patterntransform clip-path mask text-anchor dominant-baseline font-size font-family font-weight dx dy'.split())
@@ -111,7 +111,7 @@ def sanitize(raw, capability='preview', title_fallback='An imagined place', scri
                             child.set('data-anchor', value[:200])
                         elif not re.match(r'\s*(javascript|data|file|vbscript|mailto|tel):', value, re.I):
                             child.set('data-intent', value[:500])
-                elif attr in ('data-prompt', 'data-intent', 'data-target', 'data-filter'):
+                elif attr in ('data-prompt', 'data-intent', 'data-target', 'data-filter', 'data-dialog', 'data-close', 'data-value'):
                     child.set(attr, value[:500])
                 elif attr in ATTRS:
                     if attr in ('fill', 'stroke', 'filter', 'clip-path', 'mask') and not safe_tokens(tinycss2.parse_component_value_list(value)):

@@ -21,16 +21,22 @@ function drawTabs() {
     const close=document.createElement('button');close.textContent='×';close.title='Close tab';close.setAttribute('aria-label','Close '+label.textContent);close.onclick=e=>{e.stopPropagation();closeTab(tab.id);};el.append(close);
     el.onclick=()=>switchTab(tab.id);el.onkeydown=e=>{if(e.key==='Enter')switchTab(tab.id);};$('tabs').append(el);
   }
-  const t=current();$('back').disabled=!t || t.index<=0;$('forward').disabled=!t || t.index>=t.pages.length-1;
+  const t=current();$('back').disabled=!t || (t.index<=0&&!(state.jobTab===t.id&&t.index>=0));$('forward').disabled=!t || t.index>=t.pages.length-1;
   $('reload').disabled=!saved();$('reimagine').disabled=!!state.job || !saved();$('details-button').hidden=!saved();
+  const marked=!!state.status?.bookmarks?.some(p=>p.id===saved()?.id);
+  $('bookmark').disabled=!saved()||(!!state.job&&state.jobTab===state.current);$('bookmark').textContent=marked?'★':'☆';$('bookmark').setAttribute('aria-label',marked?'Remove bookmark':'Bookmark this page');
 }
 function newTab() {if(state.tabs.length>=8){toast('Eight tabs are open. Close one to keep things light.');return;} const tab={id:crypto.randomUUID(),pages:[],index:-1};state.tabs.push(tab);switchTab(tab.id);$('address').focus();}
-function switchTab(id) {state.current=id;renderSaved();drawTabs();closePanel();}
+async function captureView(){const page=state.displayed;if(!page)return;return new Promise(resolve=>{page.captureDone=resolve;$('page').contentWindow.postMessage({snapshot:true,capability:page.page.capability},'*');setTimeout(resolve,180);});}
+async function switchTab(id) {if(state.displayed)await captureView();state.current=id;renderSaved();drawTabs();closePanel();}
 async function closeTab(id) {if(state.starting){toast('Starting this page; try again in a moment.');return;}if(state.jobTab===id&&state.job)await stop();const index=state.tabs.findIndex(t=>t.id===id);state.tabs.splice(index,1);if(!state.tabs.length)newTab();else if(state.current===id)switchTab(state.tabs[Math.max(0,index-1)].id);drawTabs();}
 function showPage(page, job=null, revision=0) {
   state.displayed={page,job,revision};
-  $('blank').hidden=true;$('error').hidden=true;$('loading').hidden=true;$('page').hidden=false;
-  $('page').srcdoc=page.html;
+  $('blank').hidden=true;$('error').hidden=true;$('loading').hidden=true;
+  // A fresh sandbox prevents a cancelled srcdoc navigation from leaving a
+  // restored history entry with a detached, blank document in Chromium hosts.
+  const oldFrame=$('page'),frame=oldFrame.cloneNode(false);
+  frame.hidden=false;frame.srcdoc=page.html;oldFrame.replaceWith(frame);
   $('address').value=job?state.lastPrompt:page.prompt;
   $('imagined-label').hidden=false;
   $('review-chip').hidden=!job;
@@ -38,7 +44,7 @@ function showPage(page, job=null, revision=0) {
 function renderSaved() {
   const page=saved();state.displayed=null;
   $('error').hidden=true;$('loading').hidden=true;$('review-chip').hidden=true;
-  if(page){showPage(page);$('page-status').textContent=`Imagined in ${page.seconds}s · saved locally`;}
+  if(page){showPage(page);$('page-status').textContent=`Imagined in ${page.seconds}s · ${state.status?.bookmarks?.some(p=>p.id===page.id)?'bookmarked':'cached'}`;}
   else{$('page').hidden=true;$('page').removeAttribute('srcdoc');$('blank').hidden=false;$('address').value='';$('imagined-label').hidden=true;$('page-status').textContent='A blank page. An open possibility.';}
   drawTabs();
 }
@@ -49,6 +55,7 @@ async function navigate(prompt, parentId=null, seed=null) {
   state.queued=null;
   const tab=current();
   try {
+    await captureView();
     if(state.stopping)await state.stopping;else if(state.job)await stop();
     closePanel();state.lastPrompt=prompt;
     const result=await api('generate',{prompt,parent:parentId,seed});
@@ -79,7 +86,7 @@ async function pollJob(id) {
     }
     if(job.state==='done') {
       const tab=state.tabs.find(t=>t.id===state.jobTab);
-      if(tab){tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(job.result);tab.index=tab.pages.length-1;}
+      if(tab){job.result.viewState=state.displayed?.job===id?state.displayed.page.viewState:null;tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(job.result);tab.index=tab.pages.length-1;}
       state.job=null;state.jobTab=null;$('stop').hidden=true;
       if(visible)renderSaved();drawTabs();refreshStatus();followQueued(job.result.id);return;
     }
@@ -115,14 +122,16 @@ async function refreshStatus() {
     $('engine-dot').className=state.status.engine;
     $('engine-status').textContent=ready?'On device · Qwen3.5 4B':state.status.engine==='error'?'Model unavailable':'Loading local model…';
     $('engine-status').title=state.status.error || 'All generation happens on this computer.';
-    $('go').disabled=!ready;
+    $('go').disabled=!ready;drawTabs();
   }catch(error){$('engine-status').textContent='Disconnected';}
 }
 function closePanel(){$('panel').hidden=true;state.panel=null;}
 function panel(title,kind){state.panel=kind;$('panel').hidden=false;$('panel-title').textContent=title;$('panel-content').replaceChildren();return $('panel-content');}
 function paragraph(parent,text,cls='panel-note'){const p=document.createElement('p');p.className=cls;p.textContent=text;parent.append(p);return p;}
 function action(parent,text,fn){const b=document.createElement('button');b.className='secondary';b.textContent=text;b.onclick=fn;parent.append(b);return b;}
-async function showHistory(){if(state.panel==='history'){closePanel();return;}await refreshStatus();const content=panel('Places you’ve imagined','history');if(!state.status?.history.length)paragraph(content,'Your first destination is waiting in the address bar.');for(const item of state.status?.history||[]){const button=document.createElement('button');button.className='history-item';const title=document.createElement('strong');title.textContent=item.title;const desc=document.createElement('small');desc.textContent=item.prompt+' · '+new Date(item.created*1000).toLocaleDateString();button.append(title,desc);button.onclick=async()=>{try{if(state.job)await stop();const page=await api('pages/'+item.id);const tab=current();tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(page);tab.index=tab.pages.length-1;renderSaved();closePanel();}catch(e){toast(e.message);}};content.append(button);}}
+async function showHistory(){if(state.panel==='history'){closePanel();return;}await refreshStatus();const content=panel('Recent pages','history');paragraph(content,'New pages are cached for 24 hours and expire on a later launch. Bookmark pages to keep them. Your older archive is preserved.');if(!state.status?.history.length)paragraph(content,'Your first destination is waiting in the address bar.');for(const item of state.status?.history||[]){const button=document.createElement('button');button.className='history-item';const title=document.createElement('strong');title.textContent=item.title;const desc=document.createElement('small');desc.textContent=item.prompt+' · '+new Date(item.created*1000).toLocaleDateString();button.append(title,desc);button.onclick=async()=>{try{await captureView();if(state.job)await stop();const page=await api('pages/'+item.id);const tab=current();tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(page);tab.index=tab.pages.length-1;renderSaved();closePanel();}catch(e){toast(e.message);}};content.append(button);}}
+async function toggleBookmark(){const page=saved();if(!page||state.displayed?.job)return;try{const enabled=!state.status?.bookmarks?.some(p=>p.id===page.id);await api('bookmark',{id:page.id,enabled});await refreshStatus();toast(enabled?'Bookmarked permanently on this computer.':'Bookmark removed. The page remains in the temporary cache.');}catch(e){toast(e.message);}}
+async function showBookmarks(){if(state.panel==='bookmarks'){closePanel();return;}await refreshStatus();const content=panel('Bookmarks','bookmarks');paragraph(content,'Saved permanently on this computer. Use the star or Ctrl+D to save the current page.');for(const item of state.status?.bookmarks||[]){action(content,item.title,async()=>{try{await captureView();if(state.job)await stop();const page=await api('pages/'+item.id);const tab=current();tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(page);tab.index=tab.pages.length-1;renderSaved();closePanel();}catch(e){toast(e.message);}});}if(!state.status?.bookmarks?.length)paragraph(content,'No bookmarks yet.');}
 function showSettings(){if(state.panel==='settings'){closePanel();return;}const content=panel('A little direction','settings');
   for(const [key,title,description] of [['memory','Carry the world forward','Remember an imagined place’s details as you follow its links. Turn off for independent interpretations.'],['review','Validation reviewer','Check language and structure with a separate model call. The reviewer preserves invented content.'],['visual','Look at the page','Include a screenshot in the review. Takes a little longer and requires the desktop window to show this tab.']]){
     const label=document.createElement('label');label.className='setting';const copy=document.createElement('span');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=description;copy.append(strong,small);const input=document.createElement('input');input.type='checkbox';input.checked=!!state.status?.settings[key];input.onchange=async()=>{try{state.status.settings=await api('settings',{[key]:input.checked});}catch(e){toast(e.message);input.checked=!input.checked;}};label.append(copy,input);content.append(label);
@@ -152,23 +161,27 @@ window.addEventListener('message',event=>{
   }
   const displayed=state.displayed,data=event.data;
   if(event.source!==$('page').contentWindow||!displayed||!data||data.elsewhere!==true||data.capability!==displayed.page.capability)return;
+  if((data.kind==='viewstate'||data.kind==='navigate')&&data.view&&typeof data.view==='object'&&JSON.stringify(data.view).length<250000){displayed.page.viewState=data.view;displayed.captureDone?.();delete displayed.captureDone;}
+  if(data.kind==='ready'&&displayed.page.viewState){$('page').contentWindow.postMessage({restore:displayed.page.viewState,capability:displayed.page.capability},'*');}
   if(data.kind==='navigate'&&typeof data.prompt==='string'&&data.prompt.trim()&&data.prompt.length<=600){
     if(state.job){state.queued={prompt:data.prompt,tab:state.current,fromJob:displayed.job===state.job,parent:displayed.page.id||saved()?.id};toast('Link queued until this page finishes checking. Clicking another link replaces it.');}
     else if(state.starting){toast('Starting your page. Please wait a moment.');}
     else navigate(data.prompt,displayed.page.id||saved()?.id);
   }
-  if(data.kind==='shortcut'){if(data.key==='l'){$('address').focus();$('address').select();}if(data.key==='t')newTab();if(data.key==='w')closeTab(state.current);}
+  if(data.kind==='shortcut'){if(data.key==='l'){$('address').focus();$('address').select();}if(data.key==='t')newTab();if(data.key==='w')closeTab(state.current);if(data.key==='d')toggleBookmark();}
 });
 // Read by the desktop screenshot provider; not a backend command bridge.
 window.elsewhereCaptureInfo=()=>({job:state.displayed?.job,revision:state.displayed?.revision,panel:!!state.panel,rect:(()=>{const r=$('page').getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,viewportWidth:innerWidth,viewportHeight:innerHeight};})()});
 window.elsewherePauseMotion=()=>{try{$('review-chip').hidden=true;$('page').contentWindow.postMessage({freeze:true,capability:state.displayed?.page.capability},'*');}catch{}};
 $('address-form').onsubmit=e=>{e.preventDefault();navigate($('address').value);};
-$('new-tab').onclick=newTab;$('back').onclick=async()=>{const t=current();if(state.jobTab===t.id)await stop();if(t.index>0){t.index--;if(current()===t)renderSaved();}};$('forward').onclick=async()=>{const t=current();if(state.jobTab===t.id)await stop();if(t.index<t.pages.length-1){t.index++;if(current()===t)renderSaved();}};
+$('new-tab').onclick=newTab;$('back').onclick=async()=>{const t=current();if(!t)return;await captureView();if(state.job&&state.jobTab===t.id){await stop();return;}if(t.index>0){t.index--;if(current()===t)renderSaved();}};$('forward').onclick=async()=>{const t=current();if(!t)return;await captureView();if(state.jobTab===t.id)await stop();if(t.index<t.pages.length-1){t.index++;if(current()===t)renderSaved();}};
 $('reload').onclick=async()=>{if(state.jobTab===state.current)await stop();renderSaved();};$('reimagine').onclick=()=>{const p=saved();if(p)navigate(p.prompt,p.id);};$('retry').onclick=()=>navigate(state.lastPrompt);$('stop').onclick=()=>stop().catch(e=>toast(e.message));
 $('history-button').onclick=showHistory;$('settings-button').onclick=showSettings;$('close-panel').onclick=closePanel;$('details-button').onclick=showDetails;
+$('bookmark').onclick=toggleBookmark;$('bookmarks-button').onclick=showBookmarks;
 document.addEventListener('keydown',event=>{
   if(event.key==='F5'){event.preventDefault();$('reload').click();}
   if(event.ctrlKey){const key=event.key.toLowerCase();if(['l','t','w','r'].includes(key)){event.preventDefault();if(key==='l'){$('address').focus();$('address').select();}if(key==='t')newTab();if(key==='w')closeTab(state.current);if(key==='r')$('reload').click();}}
+  if(event.ctrlKey&&event.key.toLowerCase()==='d'){event.preventDefault();toggleBookmark();}
   if(event.altKey&&event.key==='ArrowLeft'){event.preventDefault();$('back').click();}if(event.altKey&&event.key==='ArrowRight'){event.preventDefault();$('forward').click();}
   if(event.key==='Escape'){if(state.panel)closePanel();else if(state.job)stop();}
 });

@@ -28,6 +28,13 @@ class App:
         self.data.mkdir(parents=True, exist_ok=True)
         (self.data / 'pages').mkdir(exist_ok=True)
         (self.data / 'exports').mkdir(exist_ok=True)
+        (self.data / 'cache').mkdir(exist_ok=True)
+        (self.data / 'bookmarks').mkdir(exist_ok=True)
+        # Expire only the explicitly temporary cache, never the legacy archive.
+        cutoff = time.time() - 86400
+        for path in (self.data/'cache').glob('*.json'):
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
         self.engine = Engine(data)
         self.token = secrets.token_urlsafe(32)
         self.script_nonce = secrets.token_urlsafe(24)
@@ -41,6 +48,13 @@ class App:
         self.settings = {'memory': True, 'visual': True, 'review': True}
         self.domains = {}
         self.pages = []
+        self.bookmarks = {}
+        for path in (self.data/'bookmarks').glob('*.json'):
+            if path.name.endswith('.trace.json'): continue
+            try:
+                page=json.loads(path.read_text(encoding='utf-8'))
+                self.bookmarks[page['id']]={k:page[k] for k in ('id','title','prompt','created')}
+            except (OSError,ValueError,KeyError): pass
         for name, default in [('settings',self.settings),('domains',{}),('history',[])]:
             try:
                 value = json.loads((self.data / f'{name}.json').read_text(encoding='utf-8'))
@@ -48,7 +62,7 @@ class App:
                     if name == 'settings':
                         self.settings.update({k:bool(value[k]) for k in self.settings if k in value})
                     elif name == 'domains': self.domains = value
-                    else: self.pages = value[:300]
+                    else: self.pages = [p for p in value if self.page_path(p.get('id','')) is not None][:300]
             except (OSError,ValueError):
                 pass
         self.server = ThreadingHTTPServer(('127.0.0.1',0), self.handler())
@@ -63,7 +77,36 @@ class App:
         if self.engine.state=='ready' and self.engine.process and self.engine.process.poll() is not None:
             self.engine.state='error'
             self.engine.error='The local model stopped. Close and reopen Elsewhere to reload it.'
-        return {'engine':self.engine.state, 'error':self.engine.error, 'model':'Qwen3.5 · 4B', 'settings':self.settings, 'active':self.active, 'history':self.pages, 'data_path':str(self.data), 'guards':self.guard_status, 'blocked_requests':self.blocked_requests}
+        with self.lock: bookmarks=list(self.bookmarks.values())
+        return {'engine':self.engine.state, 'error':self.engine.error, 'model':'Qwen3.5 · 4B', 'settings':self.settings, 'active':self.active, 'history':self.pages, 'bookmarks':bookmarks, 'data_path':str(self.data), 'guards':self.guard_status, 'blocked_requests':self.blocked_requests}
+
+    def page_path(self, page_id):
+        if not re.fullmatch(r'[0-9a-f]{32}',str(page_id)): return None
+        for folder in ('bookmarks','cache','pages'):
+            path=self.data/folder/f'{page_id}.json'
+            if path.exists(): return path
+        return None
+
+    def bookmark(self, page_id, enabled):
+        with self.lock:
+            page=self.load_page(page_id)
+            source=self.page_path(page_id)
+            target=self.data/'bookmarks'/f'{page_id}.json'
+            trace=source.with_name(f'{page_id}.trace.json')
+            if enabled:
+                atomic_json(target,page)
+                if trace.exists(): atomic_json(target.with_name(trace.name),json.loads(trace.read_text(encoding='utf-8')))
+                self.bookmarks[page_id]={k:page[k] for k in ('id','title','prompt','created')}
+            elif target.exists():
+                # Unbookmark returns the snapshot to cache, preserving Back.
+                atomic_json(self.data/'cache'/target.name,page)
+                saved_trace=target.with_name(f'{page_id}.trace.json')
+                if saved_trace.exists():
+                    atomic_json(self.data/'cache'/saved_trace.name,json.loads(saved_trace.read_text(encoding='utf-8')))
+                    saved_trace.unlink()
+                target.unlink()
+                self.bookmarks.pop(page_id,None)
+        return {'bookmarked':enabled}
 
     def snapshot(self, job):
         with self.lock:
@@ -205,7 +248,7 @@ class App:
             result = {**page,'id':job['id'],'prompt':job['prompt'],'world':job['world'],'seed':job['seed'],'created':time.time(),'seconds':round(time.time()-job['started'],1),'review':job['review'],'repaired':job['repair'],'settings':job['settings'],'layout':job['layout']}
             with self.lock:
                 if job['cancel'].is_set(): raise Cancelled()
-                atomic_json(self.data/'pages'/f"{job['id']}.json",result)
+                atomic_json(self.data/'cache'/f"{job['id']}.json",result)
                 self.pages.insert(0,{k:result[k] for k in ('id','title','prompt','created','seconds','seed')})
                 self.pages = self.pages[:300]
                 atomic_json(self.data/'history.json',self.pages)
@@ -220,15 +263,17 @@ class App:
             job.update(state='error',stage='Could not finish this page',error=str(exc))
         finally:
             trace.update(state=job['state'],error=job['error'],seconds=round(time.time()-job['started'],2))
-            atomic_json(self.data/'pages'/f"{job['id']}.trace.json",trace)
+            atomic_json(self.data/'cache'/f"{job['id']}.trace.json",trace)
 
     def load_page(self, page_id):
         if not re.fullmatch(r'[0-9a-f]{32}',str(page_id)):
             raise ValueError('Invalid page ID.')
-        page = json.loads((self.data/'pages'/f'{page_id}.json').read_text(encoding='utf-8'))
+        path=self.page_path(page_id)
+        if path is None: raise ValueError('This temporary page has expired. Bookmarks remain available.')
+        page = json.loads(path.read_text(encoding='utf-8'))
         # Reapply current containment and controller fixes to old snapshots. The
         # original trace remains unchanged for reproducibility.
-        trace_path = self.data/'pages'/f'{page_id}.trace.json'
+        trace_path = path.with_name(f'{page_id}.trace.json')
         raw = page['html']
         if trace_path.exists():
             trace = json.loads(trace_path.read_text(encoding='utf-8'))
@@ -324,6 +369,9 @@ class App:
                             app.settings.update({k:body[k] for k in app.settings if isinstance(body.get(k),bool)})
                             atomic_json(app.data/'settings.json',app.settings)
                         self.send(200,app.settings)
+                    elif self.path=='/api/bookmark':
+                        if not isinstance(body.get('enabled'),bool): raise ValueError('Expected bookmark state.')
+                        self.send(200,app.bookmark(body.get('id'),body['enabled']))
                     elif self.path=='/api/export':
                         page=app.load_page(body.get('id'))
                         path=app.data/'exports'/f"{page['id']}.html"
@@ -332,7 +380,9 @@ class App:
                     elif self.path=='/api/trace':
                         pid=body.get('id','')
                         if not re.fullmatch(r'[0-9a-f]{32}',pid): raise ValueError('Invalid page ID.')
-                        trace=json.loads((app.data/'pages'/f'{pid}.trace.json').read_text(encoding='utf-8'))
+                        path=app.page_path(pid)
+                        if path is None: raise ValueError('Page expired.')
+                        trace=json.loads(path.with_name(f'{pid}.trace.json').read_text(encoding='utf-8'))
                         self.send(200,trace)
                     else: self.send(404,{'error':'Not found.'})
                 except (ValueError,TypeError,KeyError,OSError) as exc:

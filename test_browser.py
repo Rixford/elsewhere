@@ -15,7 +15,9 @@ PAGE = '''<!doctype html><html><head><title>Interaction fixture</title>
 <style>body{font:18px system-ui;padding:24px}main{max-width:600px;margin:auto}input,button{padding:12px;max-width:100%}form{display:flex;flex-direction:column;gap:12px}</style></head>
 <body><main><h1>The Spire</h1><p>A deterministic fixture for local form navigation and review queues.</p>
 <form><input name="name" placeholder="Your Name" required><input name="class" placeholder="Your Class" required><input type="submit" value="Ascend"></form>
-<button data-target="details" type="button">Show details</button><p id="details" hidden>Local toggles work.</p></main></body></html>'''
+<button data-target="details" type="button">Show details</button><p id="details" hidden style="position:absolute;top:0;left:0">Local toggles work and this expanded paragraph must occupy its own space.</p>
+<button data-dialog="modal">Open dialog</button><dialog id="modal"><h2>Local dialog</h2><button data-close="true">Close dialog</button></dialog>
+<p style="min-height:900px">Scroll here to verify that Back restores position.</p></main></body></html>'''
 
 class FixtureEngine:
     state='ready'

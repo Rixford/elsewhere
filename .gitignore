@@ -21,3 +21,5 @@ webview/
 *.zip
 *.part
 .local/
+cache/
+bookmarks/

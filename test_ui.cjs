@@ -3,9 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 class Element {
-  constructor(){this.style={};this.contentWindow={};this.children=[];this.hidden=false;this.value='';}
+  constructor(){this.style={};this.contentWindow={postMessage(){}};this.children=[];this.hidden=false;this.value='';}
   replaceChildren(){this.children=[];} append(...nodes){this.children.push(...nodes);} setAttribute(){} removeAttribute(){} focus(){} select(){}
   getBoundingClientRect(){return {x:0,y:98,width:1264,height:680};}
+  cloneNode(){return new Element();} replaceWith(){}
 }
 const elements=new Map();
 const listeners=new Map();
@@ -14,7 +15,7 @@ let resolveCancel;
 const context=vm.createContext({
   console,crypto:{randomUUID:()=> 'tab-one'},location:{hash:'#token'},history:{replaceState(){}},
   document:{getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id);},createElement(){return new Element();},addEventListener(){}},
-  setInterval(){},setTimeout(){},clearTimeout(){},
+  setInterval(){},setTimeout(fn,delay){if(delay===180)queueMicrotask(fn);},clearTimeout(){},
   addEventListener(name,callback){listeners.set(name,callback);},
   fetch:async(url,options)=>{
     calls.push({url,body:options.body?JSON.parse(options.body):null});
@@ -50,10 +51,18 @@ async function main(){
   assert.equal(vm.runInContext('state.queued.prompt',context),'Explore');
   assert.equal(calls.filter(c=>c.url==='/api/generate').length,0);
   vm.runInContext("state.job=null;followQueued('finished-parent')",context);
-  await Promise.resolve();await Promise.resolve();
+  await new Promise(resolve=>setImmediate(resolve));
   const generation=calls.find(c=>c.url==='/api/generate');
   assert.equal(generation.body.prompt,'Explore');
   assert.equal(generation.body.parent,'finished-parent');
   console.log('PASS: review clicks queue the latest intent with the completed parent');
+  vm.runInContext("state.job=null;state.starting=false;state.tabs=[{id:'tab-one',pages:[{id:'a',title:'A',html:'a',capability:'a'},{id:'b',title:'B',html:'b',capability:'b'}],index:1}];state.current='tab-one';state.displayed=null",context);
+  const before=calls.filter(c=>c.url==='/api/generate').length;
+  await context.document.getElementById('back').onclick();
+  assert.equal(vm.runInContext('current().index',context),0);
+  await context.document.getElementById('forward').onclick();
+  assert.equal(vm.runInContext('current().index',context),1);
+  assert.equal(calls.filter(c=>c.url==='/api/generate').length,before);
+  console.log('PASS: Back and Forward restore cache without model calls');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

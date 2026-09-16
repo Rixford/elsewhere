@@ -69,6 +69,38 @@ class DocumentTests(unittest.TestCase):
         with self.assertRaises(ValueError):sanitize(BASE+'<div>'*60+'nested'+'</div>'*60)
 
 class ApiTests(unittest.TestCase):
+    def test_bookmark_survives_cache_expiry_and_unbookmark_keeps_back(self):
+        import os,time
+        pid='b'*32
+        page={**sanitize(BASE),'id':pid,'title':'Library','prompt':'library','created':time.time(),'capability':'cap'}
+        cached=self.app.data/'cache'/f'{pid}.json'
+        cached.write_text(json.dumps(page),encoding='utf-8')
+        self.app.bookmark(pid,True)
+        os.utime(cached,(time.time()-90000,time.time()-90000))
+        self.app.stop()
+        self.app=App(self.app.data,start_engine=False)
+        self.assertFalse(cached.exists())
+        self.assertEqual(self.app.status()['bookmarks'][0]['id'],pid)
+        self.assertEqual(self.app.load_page(pid)['title'],'Library')
+        self.app.bookmark(pid,False)
+        self.assertTrue(cached.exists())
+        self.assertEqual(self.app.status()['bookmarks'],[])
+        self.assertEqual(self.app.load_page(pid)['id'],pid)
+
+    def test_expiry_preserves_legacy_archive(self):
+        import os,time
+        legacy=self.app.data/'pages'/('c'*32+'.json')
+        legacy.write_text('{}')
+        os.utime(legacy,(time.time()-90000,time.time()-90000))
+        self.app.stop()
+        self.app=App(self.app.data,start_engine=False)
+        self.assertTrue(legacy.exists())
+
+    def test_bookmark_api_requires_boolean_and_valid_id(self):
+        headers={'X-Elsewhere-Token':self.app.token,'Origin':self.app.origin}
+        self.assertEqual(self.request('/api/bookmark','POST',{'id':'../private','enabled':True},headers)[0],400)
+        self.assertEqual(self.request('/api/bookmark','POST',{'id':'a'*32,'enabled':'true'},headers)[0],400)
+
     def test_saved_page_recovers_submit_from_original_trace(self):
         pid='a'*32
         raw=BASE+'<form><input type="submit" value="Ascend"></form>'

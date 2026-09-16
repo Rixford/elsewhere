@@ -1,3 +1,14 @@
+# Local update after rev0
+
+- Add permanent bookmarks (star / Ctrl+D) and a bookmarks panel.
+- Store new pages in a 24-hour cache; preserve the older archive and bookmark snapshots.
+- Restore page scroll, ordinary form values and expanded sections with Back/Forward.
+- Back during generation cancels the pending page without skipping the prior page.
+- Replace the sandbox frame on navigation to avoid blank restored documents.
+- Keep expanded panels in flow; repair positioned content collisions after load/resize/expansion and unstick full-width tall sidebars.
+- Add local native dialogs, category filter controls and scoped tabs.
+- Add cache-expiry, bookmark-retention and navigation regression coverage.
+
 # rev0
 
 First public source release of the Windows offline imagination browser.

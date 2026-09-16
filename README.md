@@ -18,12 +18,13 @@ After updating source files, close and reopen Elsewhere. Setup does not need to 
 
 - **Address bar / Ctrl+L:** enter a place, idea, phrase, or address.
 - **Links:** continue into another imagined page; local section links scroll within the page. During review, the latest navigation click queues with visible feedback. Switching tabs clears it when review finishes; Stop cancels it.
-- **Back / Forward:** restore the exact saved interpretation.
+- **Back / Forward:** restore cached pages without generation, including scroll, ordinary form fields and expanded sections. Back during generation cancels it and returns to the previous page.
 - **Reload / Ctrl+R:** restore the saved page without running the model.
 - **Reimagine:** generate a new interpretation, with a fresh seed.
 - **New tab / Ctrl+T:** open another blank page. Up to eight tabs; one model task at a time.
 - **Stop / Escape:** cancel the current model call and retain the previous page.
-- **History:** reopen saved pages from earlier sessions.
+- **History:** reopen recent cached pages and the preserved pre-update archive. New unbookmarked pages expire after 24 hours, cleaned up on a later launch.
+- **Star / Ctrl+D:** bookmark the current finished page permanently on this computer. The Bookmarks button lists saved pages. Click the filled star to return a bookmark to temporary storage.
 - **Page details:** inspect timing, seed, review results, source HTML, and the full generation record. Export saves a standalone HTML file in the local `exports` directory.
 
 The Settings panel controls continuity memory, the validation reviewer, and screenshot review. Turning memory off produces independent interpretations. The reviewer checks presentation and internal consistency only. It must preserve inventions, unusual ideas, and intentional design choices.
@@ -48,13 +49,15 @@ Generated pages are isolated in a sandbox without same-origin access. HTML/SVG a
 
 `runtime-path.txt` points to this PC's installed model, runtime, isolated Python environment, and saved data. The physical path may be inside the Codex application's local cache because of Windows app filesystem redirection. The launcher uses that full physical path, so it can be started from Explorer as well.
 
-- `pages/<id>.json`: sanitized saved page and review result.
+- `cache/<id>.json`: temporary page and review result, retained for at least the current session and 24 hours.
+- `bookmarks/<id>.json`: permanent bookmarked snapshot.
+- `pages/<id>.json`: preserved older archive.
 - `pages/<id>.trace.json`: prompt, context, seed, original model output, review, any repair, and timings.
 - `history.json`, `domains.json`, `settings.json`: local browsing state.
 - `exports/`: standalone HTML exports.
 - `logs/model.log`, `logs/app.log`: local diagnostics.
 
-The active window starts blank on each launch; prior pages remain in History. Closing the app stops its owned model process. A second launch does not load a second model. Saved records are not automatically deleted. “Repeat seed” reuses the seed, but exact regeneration is not guaranteed across hardware or changed context; a saved snapshot is the exact original.
+The active window starts blank on each launch; prior pages remain in History. Closing the app stops its owned model process. A second launch does not load a second model. New unbookmarked cache entries are removed on startup once older than 24 hours. Bookmarks and the older pages archive are never expired automatically. Form state is held in memory for Back/Forward; password and email field values are excluded. “Repeat seed” reuses the seed, but exact regeneration is not guaranteed across hardware or changed context; a saved snapshot is the exact original.
 
 To explore surprising behavior, compare the same entries with continuity memory on and off, and inspect the original versus reviewed HTML. Coherent invented worlds are interesting observations; the records help distinguish model output from continuity supplied by the application.
 
@@ -79,3 +82,7 @@ Upstream sources: [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B), [pinned 
 ## License
 
 Application code is MIT licensed. Downloaded model/runtime files have separate licenses; see [THIRD_PARTY.md](THIRD_PARTY.md). Local history, credentials, logs, runtime paths, and weights are excluded from Git. See [CHANGELOG.md](CHANGELOG.md) for rev0 changes.
+
+## Interaction updates after rev0
+
+Expanded panels use document flow, related tabs stay within their own tab group, filter buttons can filter locally, and native dialogs close with their close button or Escape. A bounded layout check on load, expansion and resize returns colliding positioned content to normal flow. Stacked viewport-height sidebars stop sticking over articles. These checks preserve copy and styling where possible; arbitrary model-generated layouts can still need regeneration.

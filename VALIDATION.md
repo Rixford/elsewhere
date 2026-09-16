@@ -1,3 +1,13 @@
+# Local interaction/cache update validation
+
+- 23 Python tests and four JavaScript regression scenarios pass.
+- Browser fixture: an absolutely positioned expanded paragraph became normal-flow content; a native modal opened and closed.
+- Bookmark created and reopened after frontend reload. Backend restart/expiry test confirms permanent retention while expired temporary files are removed; legacy archive remains intact.
+- Browser Back/Forward restored input values Nick / Death Knight, the open panel and vertical scroll position 899, without model regeneration.
+- Back during an active review returned to the preceding page. Fresh sandbox frames fixed the blank-document restoration observed during this test.
+- Inspected the user's Philosophy HTML in isolated temporary test data. Its full-width sticky sidebar retains viewport height when the layout stacks; the controller now returns that pattern to normal flow. Reopened that exact sample and visually confirmed the article reads without the sidebar/filter panel over it.
+- Layout recovery is conservative and bounded, not a guarantee against every possible model-generated composition. Desktop model weights and inference runtime are unchanged.
+
 # rev0 validation — 2026-09-16
 
 - 20 Python tests pass, including preservation of submit buttons, saved-page recovery from original traces, fresh-domain context isolation, and exact/ambiguous targeted edits.

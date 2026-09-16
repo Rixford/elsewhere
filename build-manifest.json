@@ -5,11 +5,11 @@
   },
   {
     "File": ".gitignore",
-    "Hash": "4e42bfa0b16a076509bd5c92f9b460e0139ad9d69d884a7ee6c660fcaee88ade"
+    "Hash": "c2064708adf0bea9cbd74ee3ae9669a481b4560cdbcfdc84158d797b09a5caee"
   },
   {
     "File": "CHANGELOG.md",
-    "Hash": "347a8d0190f11fa2b101483a3e71175ca82979844ee254a7418035c349b731b6"
+    "Hash": "f8c457be28cd94e1ee1947f903f79ac8d0f41d21c6b4d0bb28dad048a727b3fd"
   },
   {
     "File": "Elsewhere.ico",
@@ -21,7 +21,7 @@
   },
   {
     "File": "README.md",
-    "Hash": "5c6f248d19e2c08725e0a453ba1e6ab38b92816a3ee92bfa1b9a1c49a7e65e92"
+    "Hash": "fc20ce39df1c28c91cc4d538dfd87c220c89796051730f2bd6ab5cd174c6afc6"
   },
   {
     "File": "Setup Elsewhere.cmd",
@@ -37,7 +37,7 @@
   },
   {
     "File": "VALIDATION.md",
-    "Hash": "96b6395c3fbd16b5681c61044b12e637f465a0ca3eeff649e8955e1e9f9f5e97"
+    "Hash": "2908de49f196119aba18fbb759471fe3170100844a42baff06968f496682c0a4"
   },
   {
     "File": "app.py",
@@ -45,11 +45,11 @@
   },
   {
     "File": "backend.py",
-    "Hash": "165bcacb62dc7bc1e8c9ec6bd22b3e300af33bf52f6ffddc2d8136bb9790f0db"
+    "Hash": "0736dc39318e364e4b5792dc26b034f4ccf77c470a2401d005f5f2f67189bb3a"
   },
   {
     "File": "engine.py",
-    "Hash": "ee2513eceb1d68d6a69a8fbaed6536caa9a7982a527ce6e0bf965e84d839533a"
+    "Hash": "1a902ee114c36b7fc814ae3501492e2d7bdd254125f90e7fa032c2e264075899"
   },
   {
     "File": "make_icon.py",
@@ -61,7 +61,7 @@
   },
   {
     "File": "sanitize.py",
-    "Hash": "4d4ef9321897b3f1ac0ebf1bf2705d9e2e25564e68ea117b4d57365679301305"
+    "Hash": "2b2c857f3c5b302e62b967bafd445d63718e046de3da4bf6694a2d40ebf7cb0d"
   },
   {
     "File": "setup.py",
@@ -69,15 +69,15 @@
   },
   {
     "File": "test_browser.py",
-    "Hash": "d0edc1c2c1a339f23f389851b28709f7bfa63cd8b0747bf63d9f7ff4f2bf185b"
+    "Hash": "f3a7e53ba0a5cd83a46239210264d8f5f18318dccf2a72bc7610c3c9491f1059"
   },
   {
     "File": "test_core.py",
-    "Hash": "c594627a821d6664c2b248f5bf7c6428fb12391f3b9c2a6d46e793fcaba01b8d"
+    "Hash": "a82b4c5522a58ead1264aa7ae1013b7d7763c551ca923dc74b9e58b76f860405"
   },
   {
     "File": "test_ui.cjs",
-    "Hash": "d2a25d835f136f94ce61bd62d7e452520f5a520410f9fafdcfa3bf1c1232051d"
+    "Hash": "bc54578475e20b5c01ca69758e116095759047c7e8c898e968b65046c4b78bc3"
   },
   {
     "File": "web/app.css",
@@ -85,14 +85,14 @@
   },
   {
     "File": "web/app.js",
-    "Hash": "d9b1ae5aa9684101aab6e41c0c2a2f7514feda268568ed05119331fe0bd0cbf4"
+    "Hash": "fd58d730b4f793a605ddf0a4937994d0239b5fc0b39193d2c6c4aaea879c0729"
   },
   {
     "File": "web/index.html",
-    "Hash": "f2d2567d84dbc0eb3b035a2a2208c17730fa560925fbbc8f048a0dd9d4f15a94"
+    "Hash": "d674e7bd61615883c6263af4a4b42a78bf3387b0712ba182bd588cec9deff410"
   },
   {
     "File": "web/page-controller.js",
-    "Hash": "133039d7f4215660297b4ba05b9d46d08f208093783ab737c8f1a683ee394cb8"
+    "Hash": "2ef04d1a380f5b0b76f9851e32ce0bd741874a681c2e0997497fa5e37c39a5f3"
   }
 ]
