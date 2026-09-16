@@ -63,7 +63,7 @@ function renderCurrent(){
   const failure=current()?.failure;
   if(failure&&!saved()){$('blank').hidden=true;$('error').hidden=false;$('error-message').textContent=failure.message;$('address').value=failure.prompt;}
   const pending=state.pending.find(p=>p.tab===state.current);
-  if(pending){$('page-status').textContent='Queued · another tab is using the local model';if(!saved()){$('blank').hidden=true;$('loading').hidden=false;$('loading-stage').textContent='Queued for the local model';$('loading-detail').textContent='You can browse other tabs while this waits.';$('address').value=pending.prompt;}}
+  if(pending){$('page-status').textContent='Queued · another tab is using the model';if(!saved()){$('blank').hidden=true;$('loading').hidden=false;$('loading-stage').textContent='Queued for the model';$('loading-detail').textContent='You can browse other tabs while this waits.';$('address').value=pending.prompt;}}
 }
 function enqueue(request){state.pending=state.pending.filter(p=>p.tab!==request.tab);state.pending.push(request);drawTabs();toast('Queued in this tab. The other page will continue building.');}
 function drainQueue(){if(state.job||state.starting||state.stopping)return;const next=state.pending.shift();if(!next)return;if(!state.tabs.some(t=>t.id===next.tab)){drainQueue();return;}navigate(next.prompt,next.parent,next.seed,next.link,next.tab);}
@@ -146,13 +146,17 @@ async function refreshStatus() {
   try{
     state.status=await api('status');const ready=state.status.engine==='ready';
     $('engine-dot').className=state.status.engine;
-    $('engine-status').textContent=ready?'On device · Qwen3.5 4B':state.status.engine==='error'?'Model unavailable':'Loading local model…';
-    $('engine-status').title=state.status.error || 'All generation happens on this computer.';
+    const cloud=state.status.router?.provider && state.status.router.provider!=='local';
+    $('mode-label').textContent=cloud?'CLOUD':'LOCAL';
+    $('engine-status').textContent=ready?(cloud?state.status.router.provider==='openai'?'OpenAI · '+state.status.model:'Claude · '+state.status.model:'On device · Qwen3.5 4B'):state.status.engine==='error'?'Model unavailable':'Loading local model…';
+    $('engine-status').title=state.status.error || (cloud?'Cloud selected for new requests. Active jobs keep their original model.':'All new generation happens on this computer.');
+    applySettingsTheme();
     $('go').disabled=!ready;drawTabs();
   }catch(error){$('engine-status').textContent='Disconnected';}
 }
-function closePanel(){$('panel').hidden=true;state.panel=null;}
-function panel(title,kind){state.panel=kind;$('panel').hidden=false;$('panel-title').textContent=title;$('panel-content').replaceChildren();return $('panel-content');}
+function applySettingsTheme(){$('panel').setAttribute('data-dark',String(state.panel==='settings'&&!!state.status?.settings.dark_settings));}
+function closePanel(){$('panel').hidden=true;$('panel-content').replaceChildren();state.panel=null;applySettingsTheme();}
+function panel(title,kind){state.panel=kind;$('panel').hidden=false;$('panel-title').textContent=title;$('panel-content').replaceChildren();applySettingsTheme();return $('panel-content');}
 function paragraph(parent,text,cls='panel-note'){const p=document.createElement('p');p.className=cls;p.textContent=text;parent.append(p);return p;}
 function action(parent,text,fn){const b=document.createElement('button');b.className='secondary';b.textContent=text;b.onclick=fn;parent.append(b);return b;}
 async function showHistory(){if(state.panel==='history'){closePanel();return;}await refreshStatus();const content=panel('Recent pages','history');paragraph(content,'New pages are cached for 24 hours and expire on a later launch. Bookmark pages to keep them. Your older archive is preserved.');if(!state.status?.history.length)paragraph(content,'Your first destination is waiting in the address bar.');for(const item of state.status?.history||[]){const button=document.createElement('button');button.className='history-item';const title=document.createElement('strong');title.textContent=item.title;const desc=document.createElement('small');desc.textContent=item.prompt+' · '+new Date(item.created*1000).toLocaleDateString();button.append(title,desc);button.onclick=()=>openSavedPage(item.id);content.append(button);}}
@@ -162,19 +166,45 @@ async function openSavedPage(id){
 }
 async function toggleBookmark(){const page=saved();if(!page||state.displayed?.job)return;try{const enabled=!state.status?.bookmarks?.some(p=>p.id===page.id);await api('bookmark',{id:page.id,enabled});await refreshStatus();toast(enabled?'Bookmarked permanently on this computer.':'Bookmark removed. The page remains in the temporary cache.');}catch(e){toast(e.message);}}
 async function showBookmarks(){if(state.panel==='bookmarks'){closePanel();return;}await refreshStatus();const content=panel('Bookmarks','bookmarks');paragraph(content,'Saved permanently on this computer. Use the star or Ctrl+D to save the current page.');for(const item of state.status?.bookmarks||[]){action(content,item.title,()=>openSavedPage(item.id));}if(!state.status?.bookmarks?.length)paragraph(content,'No bookmarks yet.');}
-function showSettings(){if(state.panel==='settings'){closePanel();return;}const content=panel('A little direction','settings');
-  for(const [key,title,description] of [['memory','Carry the world forward','Remember an imagined place’s details as you follow its links. Turn off for independent interpretations.'],['review','Validation reviewer','Check language and structure with a separate model call. The reviewer preserves invented content.'],['visual','Look at the page','Include a screenshot in the review. Takes a little longer and requires the desktop window to show this tab.']]){
-    const label=document.createElement('label');label.className='setting';const copy=document.createElement('span');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=description;copy.append(strong,small);const input=document.createElement('input');input.type='checkbox';input.checked=!!state.status?.settings[key];input.onchange=async()=>{try{state.status.settings=await api('settings',{[key]:input.checked});}catch(e){toast(e.message);input.checked=!input.checked;}};label.append(copy,input);content.append(label);
+function modelSettings(content){
+  const route=state.status?.router||{provider:'local',presets:{}};
+  const form=document.createElement('div');form.className='model-settings';content.append(form);
+  function field(label,node){const wrap=document.createElement('label');wrap.className='model-field';const text=document.createElement('span');text.textContent=label;wrap.append(text,node);form.append(wrap);return wrap;}
+  function option(select,value,title){const node=document.createElement('option');node.value=value;node.textContent=title;select.append(node);}
+  const provider=document.createElement('select');provider.id='model-provider';provider.setAttribute('aria-label','Model provider');
+  for(const [value,title] of [['local','Local · Qwen3.5 4B'],['openai','OpenAI API'],['anthropic','Anthropic · Claude API']])option(provider,value,title);
+  provider.value=route.provider;field('Model provider',provider);
+  const model=document.createElement('select');model.setAttribute('aria-label','Cloud model');const modelField=field('Model',model);
+  const custom=document.createElement('input');custom.type='text';custom.maxLength=100;custom.placeholder='Exact model ID';custom.setAttribute('aria-label','Custom model ID');const customField=field('Custom model ID',custom);
+  const key=document.createElement('input');key.type='password';key.autocomplete='off';key.spellcheck=false;key.maxLength=4096;key.setAttribute('aria-label','API key');const keyField=field('API key · this app session only',key);
+  const workspace=document.createElement('input');workspace.type='text';workspace.maxLength=100;workspace.placeholder='wrkspc_…';workspace.setAttribute('aria-label','Claude workspace ID');const workspaceField=field('Claude workspace ID (only if your key requires it)',workspace);
+  const notice=paragraph(form,'');notice.className='model-notice';
+  const use=action(form,'Use local model',async()=>{
+    use.disabled=true;
+    try{state.status.router=await api('router',{provider:provider.value,model:model.value==='custom'?custom.value.trim():model.value,api_key:key.value,workspace:workspace.value.trim(),cloud_consent:provider.value!=='local'});key.value='';await refreshStatus();key.placeholder=state.status.router.keys[provider.value]?'Session key is set; leave blank to keep it':'Paste your provider API key';toast(provider.value==='local'?'Local Qwen selected.':'Cloud model selected for new and queued requests.');}
+    catch(e){toast(e.message);}finally{use.disabled=false;}
+  });
+  function render(){const cloud=provider.value!=='local';modelField.hidden=keyField.hidden=!cloud;workspaceField.hidden=provider.value!=='anthropic';model.replaceChildren();for(const id of route.presets[provider.value]||[])option(model,id,id);option(model,'custom','Custom model ID…');model.value=(route.presets[provider.value]||[]).includes(route.model)?route.model:(route.provider===provider.value&&route.model?'custom':(route.presets[provider.value]||[])[0]||'custom');custom.value=route.provider===provider.value?route.model||'':'';customField.hidden=!cloud||model.value!=='custom';key.value='';key.placeholder=state.status?.router?.keys?.[provider.value]?'Session key is set; leave blank to keep it':'Paste your provider API key';workspace.value=provider.value===route.provider?route.workspace||'':'';
+    notice.textContent=cloud?'Using this model sends prompts, linked-page context, generated HTML and enabled review screenshots to '+(provider.value==='openai'?'OpenAI':'Anthropic')+'. API charges and provider data policies apply. Generation, review and any refinement use this model. Keys are forgotten on exit; restart returns to Local.':'Qwen runs on this computer without internet or an API key. Model changes apply to the next request; active builds keep their current model.';
+    use.textContent=cloud?'Use '+(provider.value==='openai'?'OpenAI':'Claude')+' · cloud':'Use local model';
+  }
+  provider.onchange=render;model.onchange=()=>{customField.hidden=model.value!=='custom';};render();
+  action(form,'Clear session API keys',async()=>{try{state.status.router=await api('router',{forget_keys:true});key.value='';await refreshStatus();state.panel=null;showSettings();toast('Keys cleared. Local Qwen selected.');}catch(e){toast(e.message);}});
+}
+function showSettings(){if(state.panel==='settings'){closePanel();return;}const content=panel('Settings','settings');
+  modelSettings(content);
+  for(const [key,title,description] of [['dark_settings','Dark settings panel','Use a dark theme here. Imagined pages keep their own design.'],['memory','Carry the world forward','Remember an imagined place’s details as you follow its links. Turn off for independent interpretations.'],['review','Validation reviewer','Check language and structure with a separate model call. The reviewer preserves invented content.'],['visual','Look at the page','Include a screenshot in the review. With a cloud model, this image is sent to that provider. Requires this tab to be visible.']]){
+    const label=document.createElement('label');label.className='setting';const copy=document.createElement('span');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=description;copy.append(strong,small);const input=document.createElement('input');input.type='checkbox';input.checked=!!state.status?.settings[key];input.onchange=async()=>{try{state.status.settings=await api('settings',{[key]:input.checked});applySettingsTheme();}catch(e){toast(e.message);input.checked=!input.checked;}};label.append(copy,input);content.append(label);
   }
   paragraph(content,'Everything you enter is a creative prompt. Addresses never contact a real website. Code checks always run. Changes apply to the next page.');
-  paragraph(content,'One local model · separate validation context · at most one refinement.');
+  paragraph(content,'One selected model · separate validation context · at most one refinement.');
   paragraph(content,'Saved on this computer: '+(state.status?.data_path||''));
 }
-function showDetails(){const page=saved();if(!page)return;if(state.panel==='details'){closePanel();return;}const content=panel('Behind this page','details');paragraph(content,page.title);const dl=document.createElement('dl');dl.className='details-list';for(const [k,v] of [['Entry',page.prompt],['Seed',String(page.seed)],['Time',page.seconds+' seconds'],['Memory',page.settings.memory?'On':'Off'],['Review',page.review?.unavailable?'Unavailable':page.review?(page.review.visual?'Visual + language':'Language + structure'):'Code checks only'],['Refinement',page.repaired?'One pass':'None']]){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=k;dd.textContent=v;dl.append(dt,dd);}content.append(dl);if(page.review)paragraph(content,page.review.summary+(page.repaired?' This report describes the first version; the refinement was checked by code.':''),'review-report');for(const issue of page.review?.issues||[])paragraph(content,issue.detail,'review-report');const actions=document.createElement('div');actions.className='detail-actions';content.append(actions);
+function showDetails(){const page=saved();if(!page)return;if(state.panel==='details'){closePanel();return;}const content=panel('Behind this page','details');paragraph(content,page.title);const dl=document.createElement('dl');dl.className='details-list';for(const [k,v] of [['Entry',page.prompt],['Model',page.model||'Qwen3.5 4B'],['Seed',page.provider&&page.provider!=='local'?'Not supported by cloud APIs':String(page.seed)],['Time',page.seconds+' seconds'],['Memory',page.settings.memory?'On':'Off'],['Review',page.review?.unavailable?'Unavailable':page.review?(page.review.visual?'Visual + language':'Language + structure'):'Code checks only'],['Refinement',page.repaired?'One pass':'None']]){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=k;dd.textContent=v;dl.append(dt,dd);}content.append(dl);if(page.review)paragraph(content,page.review.summary+(page.repaired?' This report describes the first version; the refinement was checked by code.':''),'review-report');for(const issue of page.review?.issues||[])paragraph(content,issue.detail,'review-report');const actions=document.createElement('div');actions.className='detail-actions';content.append(actions);
   action(actions,'Export HTML',async()=>{try{const result=await api('export',{id:page.id});toast('Saved: '+result.path);}catch(e){toast(e.message);}});
   action(actions,'View HTML',()=>{const pre=document.createElement('pre');pre.className='source';pre.textContent=page.html;content.append(pre);});
   action(actions,'Generation record',async()=>{try{const trace=await api('trace',{id:page.id});const pre=document.createElement('pre');pre.className='source';pre.textContent=JSON.stringify(trace,null,2);content.append(pre);}catch(e){toast(e.message);}});
-  action(actions,'Repeat seed',()=>navigate(page.prompt,null,page.seed));
+  action(actions,page.provider&&page.provider!=='local'?'Imagine again':'Repeat seed',()=>navigate(page.prompt,null,page.seed));
 }
 window.addEventListener('message',event=>{
   if(event.source===$('validation-frame').contentWindow){

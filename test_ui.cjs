@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 class Element {
-  constructor(){this.style={};this.contentWindow={postMessage(){}};this.children=[];this.hidden=false;this.value='';}
-  replaceChildren(){this.children=[];} append(...nodes){this.children.push(...nodes);} setAttribute(){} removeAttribute(){} focus(){} select(){}
+  constructor(){this.style={};this.contentWindow={postMessage(){}};this.children=[];this.hidden=false;this.value='';this.attributes={};}
+  replaceChildren(){this.children=[];} append(...nodes){this.children.push(...nodes);} setAttribute(name,value){this.attributes[name]=value;} removeAttribute(name){delete this.attributes[name];} focus(){} select(){}
   getBoundingClientRect(){return {x:0,y:98,width:1264,height:680};}
   cloneNode(){return new Element();} replaceWith(){}
 }
@@ -120,5 +120,20 @@ async function main(){
   assert.equal(vm.runInContext('state.jobTab',context),'tab-one');
   assert.equal(calls.filter(c=>c.url==='/api/generate').at(-1).body.parent,'reviewed');
   console.log('PASS: a review-time link follows its completed parent after switching away');
+
+  vm.runInContext("state.status={settings:{dark_settings:true},router:{provider:'local',presets:{openai:['gpt-6-astra'],anthropic:['claude-opus-5']},keys:{}}};state.panel=null;showSettings()",context);
+  assert.equal(elements.get('panel').attributes['data-dark'],'true');
+  const descendants=node=>[node,...node.children.flatMap(descendants)];
+  const inputs=descendants(elements.get('panel-content'));
+  const password=inputs.find(node=>node.attributes['aria-label']==='API key');
+  assert.equal(password.type,'password');assert.equal(password.autocomplete,'off');assert.equal(password.value,'');
+  const provider=inputs.find(node=>node.attributes['aria-label']==='Model provider');
+  provider.value='anthropic';provider.onchange();
+  assert.ok(inputs.some(node=>node.textContent?.includes('API charges')));
+  password.value='transient-test-key';
+  vm.runInContext("panel('Recent pages','history')",context);
+  assert.equal(elements.get('panel').attributes['data-dark'],'false');
+  assert.ok(!descendants(elements.get('panel-content')).includes(password));
+  console.log('PASS: dark mode is Settings-only and key entry is masked, transient and disclosed');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

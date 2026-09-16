@@ -12,7 +12,7 @@ jobs:
         with:
           node-version: '22'
       - run: python -m pip install html5lib==1.1 tinycss2==1.4.0
-      - run: python -m unittest -v test_core
+      - run: python -m unittest -v test_core test_cloud
       - run: node test_ui.cjs
       - run: node --check web/app.js
       - run: node --check web/page-controller.js

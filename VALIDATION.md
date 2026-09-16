@@ -1,3 +1,12 @@
+# Optional cloud router / Settings theme validation
+
+- 39 Python tests and nine JavaScript regression scenarios pass. CI includes the cloud adapter tests; they use simulated HTTPS/SSE responses and never call paid APIs.
+- OpenAI fixtures verify the Responses endpoint, authorization, `store:false`, text streaming, local image input, JSON output mode, token usage and omission of local sampling parameters. Claude fixtures verify Messages, version/workspace headers, image conversion, text versus thinking deltas, usage, current structured refusal details and legacy refusal stops.
+- Both adapters reject incomplete streams, provider errors and refusals without automatic network retries or fallback. Tests cover cancellation before dispatch and socket interruption during streaming, session-only keys, credential-free status/job snapshots/traces, per-job model retention, and terminating review refusals without repair.
+- Router API authorization/origin checks and persisted Settings dark preference pass. Browser fixture confirmed masked key entry, selection of Claude Opus 5 with a dummy session key, CLOUD status, empty key field after saving, and clearing keys to return to Local. No cloud generation was requested in that browser test.
+- Visually confirmed that the dark theme affects only the Settings panel; the browser chrome and page remain unchanged. JavaScript checks verify other panels remain light and closing/replacing a panel discards the key-entry DOM.
+- Official API/model documentation was checked September 16, 2026; source links and cloud data handling are documented in README. No live OpenAI or Anthropic credential was supplied, so paid endpoint acceptance, account-specific model access and real cloud latency remain unverified. Local weights/runtime and page network guards are unchanged.
+
 # Local continuity/background-tab update validation
 
 - 27 Python tests and eight JavaScript regression scenarios pass; both browser scripts pass syntax checks.

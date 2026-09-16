@@ -69,6 +69,23 @@ class DocumentTests(unittest.TestCase):
         with self.assertRaises(ValueError):sanitize(BASE+'<div>'*60+'nested'+'</div>'*60)
 
 class ApiTests(unittest.TestCase):
+    def test_router_endpoint_requires_auth_origin_and_never_returns_key(self):
+        body={'provider':'openai','model':'gpt-6-astra','api_key':'test-secret','cloud_consent':True}
+        self.assertEqual(self.request('/api/router','POST',body)[0],403)
+        headers={'X-Elsewhere-Token':self.app.token,'Origin':'null'}
+        self.assertEqual(self.request('/api/router','POST',body,headers)[0],403)
+        headers['Origin']=self.app.origin
+        status,data=self.request('/api/router','POST',body,headers)
+        self.assertEqual(status,200)
+        self.assertNotIn(b'test-secret',data)
+        self.assertEqual(json.loads(data)['provider'],'openai')
+
+    def test_dark_settings_preference_survives_restart(self):
+        headers={'X-Elsewhere-Token':self.app.token,'Origin':self.app.origin}
+        self.assertEqual(self.request('/api/settings','POST',{'dark_settings':True},headers)[0],200)
+        self.app.stop();self.app=App(self.app.data,start_engine=False)
+        self.assertTrue(self.app.settings['dark_settings'])
+
     def store_page(self, pid, prompt, world='bruceleequotes.com', site=None):
         page={**sanitize('<style>body{color:gold}</style>'+BASE),'id':pid,'prompt':prompt,'world':world,'capability':'test-cap'}
         if site is not None: page['site']=site

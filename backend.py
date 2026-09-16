@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
 from engine import Engine, Cancelled, GENERATE, REVIEW
+from cloud import CloudEngine, ProviderError, PRESETS, checked_route
 from sanitize import sanitize
 
 ROOT = Path(__file__).resolve().parent
@@ -44,6 +45,8 @@ class App:
             if path.stat().st_mtime < cutoff:
                 path.unlink()
         self.engine = Engine(data)
+        self.route = {'provider':'local','model':'Qwen3.5-4B-Q4_K_M'}
+        self.api_keys = {}  # Session only: never persisted or returned to the UI.
         self.token = secrets.token_urlsafe(32)
         self.script_nonce = secrets.token_urlsafe(24)
         self.lock = threading.RLock()
@@ -53,7 +56,7 @@ class App:
         self.capture = None
         self.guard_status = 'browser'
         self.blocked_requests = 0
-        self.settings = {'memory': True, 'visual': True, 'review': True}
+        self.settings = {'memory': True, 'visual': True, 'review': True, 'dark_settings': False}
         self.domains = {}
         self.pages = []
         self.bookmarks = {}
@@ -86,7 +89,27 @@ class App:
             self.engine.state='error'
             self.engine.error='The local model stopped. Close and reopen Elsewhere to reload it.'
         with self.lock: bookmarks=list(self.bookmarks.values())
-        return {'engine':self.engine.state, 'error':self.engine.error, 'model':'Qwen3.5 · 4B', 'settings':self.settings, 'active':self.active, 'history':self.pages, 'bookmarks':bookmarks, 'data_path':str(self.data), 'guards':self.guard_status, 'blocked_requests':self.blocked_requests}
+        with self.lock:
+            route=self.router_status()
+            local=self.route['provider']=='local'
+        return {'engine':self.engine.state if local else 'ready', 'error':self.engine.error if local else '', 'model':route['model'], 'router':route, 'settings':self.settings, 'active':self.active, 'history':self.pages, 'bookmarks':bookmarks, 'data_path':str(self.data), 'guards':self.guard_status, 'blocked_requests':self.blocked_requests}
+
+    def router_status(self):
+        return {**self.route,'presets':PRESETS,'keys':{p:bool(self.api_keys.get(p)) for p in PRESETS}}
+
+    def configure_router(self, body):
+        with self.lock:
+            if body.get('forget_keys') is True:
+                # Stop first so forgotten credentials cannot issue review/repair calls.
+                if self.active and self.jobs[self.active]['state'] not in TERMINAL:
+                    raise ValueError('Stop the active generation before clearing session keys.')
+                self.api_keys.clear()
+                self.route={'provider':'local','model':'Qwen3.5-4B-Q4_K_M'}
+            else:
+                route,key=checked_route(body,self.api_keys)
+                if key: self.api_keys[route['provider']]=key
+                self.route=route
+            return self.router_status()
 
     def page_path(self, page_id):
         if not re.fullmatch(r'[0-9a-f]{32}',str(page_id)): return None
@@ -118,23 +141,24 @@ class App:
 
     def snapshot(self, job):
         with self.lock:
-            return copy.deepcopy({k:v for k,v in job.items() if k not in ('cancel','rendered','thread','raw','context')})
+            return copy.deepcopy({k:v for k,v in job.items() if k not in ('cancel','rendered','thread','raw','context','runner')})
 
     def cancel(self, job_id):
         job = self.jobs.get(job_id)
         if job and job['state'] not in TERMINAL:
             job['cancel'].set()
             job['rendered'].set()
-            self.engine.interrupt()
+            job.get('runner',self.engine).interrupt()
             job['state'] = 'cancelled'
 
     def start_job(self, body):
         prompt = body.get('prompt', '')
         if not isinstance(prompt,str) or not prompt.strip() or len(prompt) > 1200:
             raise ValueError('Enter between 1 and 1,200 characters.')
-        if self.engine.state != 'ready':
-            raise ValueError(self.engine.error or 'The local model is still loading.')
         with self.lock:
+            route=dict(self.route)
+            runner=self.engine if route['provider']=='local' else CloudEngine(route,self.api_keys[route['provider']])
+            if runner.state!='ready': raise ValueError(runner.error or 'The local model is still loading.')
             if self.active and self.jobs[self.active]['state'] in TERMINAL:
                 self.jobs[self.active]['thread'].join(timeout=1)
             if self.active and self.jobs[self.active]['thread'].is_alive():
@@ -186,6 +210,7 @@ class App:
                 seed = secrets.randbelow(2147483647)
             jid = uuid.uuid4().hex
             job = {'id':jid,'prompt':entry,'world':key,'seed':seed,'state':'generating','stage':'Imagining your page','chars':0,'started':time.time(),'revision':0,'page':None,'review':None,'error':'','settings':dict(self.settings),'context':context,'cancel':threading.Event(),'rendered':threading.Event(),'layout':{},'repair':False}
+            job.update(runner=runner,provider=route['provider'],model=route['model'])
             self.jobs[jid] = job
             self.active = jid
             worker = threading.Thread(target=self.run_job,args=(job,),daemon=True)
@@ -214,11 +239,14 @@ class App:
             raise ValueError('The browser did not return layout measurements within 30 seconds. Keep the app open and try again; the model already produced a page.')
 
     def run_job(self, job):
-        trace = {'id':job['id'],'prompt':job['prompt'],'seed':job['seed'],'world':job['world'],'settings':job['settings'],'context':job['context'],'model':'Qwen3.5-4B-Q4_K_M','runtime':'llama.cpp b11007','started':job['started']}
+        runner=job.get('runner',self.engine)
+        provider=job.get('provider','local')
+        trace = {'id':job['id'],'prompt':job['prompt'],'seed':job['seed'],'world':job['world'],'settings':job['settings'],'context':job['context'],'provider':provider,'model':job.get('model','Qwen3.5-4B-Q4_K_M'),'runtime':'llama.cpp b11007' if provider=='local' else 'official HTTPS API','started':job['started']}
         trace.update(generator_instructions=GENERATE,reviewer_instructions=REVIEW,sampling={'temperature':.9,'repair_temperature':.35,'review_temperature':.1,'top_p':.92,'top_k':40,'max_output_tokens':5200,'context_tokens':16384})
+        if provider!='local': trace['sampling']={'generation_output_budget':9296,'seed_supported':False,'automatic_network_retries':0}
         try:
             progress = lambda n: job.update(chars=n)
-            raw, stats = self.engine.generate(job['prompt'],job['context'],job['cancel'],job['seed'],progress)
+            raw, stats = runner.generate(job['prompt'],job['context'],job['cancel'],job['seed'],progress)
             trace['original_html'] = raw
             trace['generation'] = stats
             issues = []
@@ -246,8 +274,8 @@ class App:
                 if job['settings']['review']:
                     job['stage'] = 'Reviewing visuals and language' if screenshot else 'Reviewing language and structure'
                     try:
-                        review = self.engine.review(page,job['layout'],screenshot,job['cancel'])
-                    except Cancelled:
+                        review = runner.review(page,job['layout'],screenshot,job['cancel'])
+                    except (Cancelled,ProviderError):
                         raise
                     except Exception as exc:
                         review = {'issues':[],'summary':'Model review unavailable: '+str(exc)[:160],'visual':False,'unavailable':True}
@@ -258,7 +286,7 @@ class App:
                 job.update(state='repairing', stage='Refining presentation', repair=True, chars=0)
                 if page and not structural_issues:
                     try:
-                        raw, stats = self.engine.patch(raw,issues[:4],job['cancel'],job['seed'])
+                        raw, stats = runner.patch(raw,issues[:4],job['cancel'],job['seed'])
                         trace['repair_mode'] = 'targeted'
                     except ValueError as exc:
                         # A failed cosmetic patch must not discard a structurally
@@ -267,7 +295,7 @@ class App:
                         job['review']['summary'] += ' Targeted refinement could not be applied; original retained.'
                         job['repair'] = False
                 else:
-                    raw, stats = self.engine.generate(job['prompt'],job['context'],job['cancel'],job['seed'],progress,repair={'raw':raw,'issues':issues[:6]})
+                    raw, stats = runner.generate(job['prompt'],job['context'],job['cancel'],job['seed'],progress,repair={'raw':raw,'issues':issues[:6]})
                     trace['repair_mode'] = 'full'
                 trace['repair_html'] = raw
                 trace['repair_reasons'] = issues
@@ -281,6 +309,7 @@ class App:
             if not page: raise ValueError('No usable page was produced.')
             result = {**page,'id':job['id'],'prompt':job['prompt'],'world':job['world'],'seed':job['seed'],'created':time.time(),'seconds':round(time.time()-job['started'],1),'review':job['review'],'repaired':job['repair'],'settings':job['settings'],'layout':job['layout']}
             result['site']=copy.deepcopy(job['context']['site']) if job['context'] else site_identity(result)
+            result.update(provider=provider,model=trace['model'])
             result['parent']=job['context']['previous_entry'] if job['context'] else None
             with self.lock:
                 if job['cancel'].is_set(): raise Cancelled()
@@ -298,6 +327,7 @@ class App:
         except Exception as exc:
             job.update(state='error',stage='Could not finish this page',error=str(exc))
         finally:
+            job.pop('runner',None)
             trace.update(state=job['state'],error=job['error'],seconds=round(time.time()-job['started'],2))
             atomic_json(self.data/'cache'/f"{job['id']}.trace.json",trace)
 
@@ -324,6 +354,7 @@ class App:
         self.stopped=True
         if self.active: self.cancel(self.active)
         self.engine.stop()
+        self.api_keys.clear()
         if self.active:
             worker=self.jobs[self.active]['thread']
             if worker is not threading.current_thread():worker.join(timeout=3)
@@ -405,6 +436,8 @@ class App:
                             app.settings.update({k:body[k] for k in app.settings if isinstance(body.get(k),bool)})
                             atomic_json(app.data/'settings.json',app.settings)
                         self.send(200,app.settings)
+                    elif self.path=='/api/router':
+                        self.send(200,app.configure_router(body))
                     elif self.path=='/api/bookmark':
                         if not isinstance(body.get('enabled'),bool): raise ValueError('Expected bookmark state.')
                         self.send(200,app.bookmark(body.get('id'),body['enabled']))
