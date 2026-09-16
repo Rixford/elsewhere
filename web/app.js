@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const token = location.hash.slice(1);
 history.replaceState(null, '', '/');
-const state = {tabs:[],current:null,job:null,jobTab:null,starting:false,startTab:null,stopping:null,revision:0,status:null,displayed:null,validation:null,panel:null,lastPrompt:'',timer:null,queued:null,pending:[],progress:null,switchEpoch:0,tabSignature:null};
+const state = {tabs:[],current:null,job:null,jobTab:null,starting:false,startTab:null,stopping:null,revision:0,status:null,displayed:null,validation:null,panel:null,lastPrompt:'',timer:null,queued:null,pending:[],progress:null,switchEpoch:0,tabSignature:null,clearingHistory:false,historyEpoch:0};
 async function api(path, body) {
   const response = await fetch('/api/' + path, {method:body ? 'POST':'GET',headers:{'X-Elsewhere-Token':token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
   const result = await response.json();
@@ -68,6 +68,7 @@ function renderCurrent(){
 function enqueue(request){state.pending=state.pending.filter(p=>p.tab!==request.tab);state.pending.push(request);drawTabs();toast('Queued in this tab. The other page will continue building.');}
 function drainQueue(){if(state.job||state.starting||state.stopping)return;const next=state.pending.shift();if(!next)return;if(!state.tabs.some(t=>t.id===next.tab)){drainQueue();return;}navigate(next.prompt,next.parent,next.seed,next.link,next.tab);}
 async function navigate(prompt, parentId=null, seed=null, link=null, tabId=state.current) {
+  if(state.clearingHistory){toast('History is being cleared. Try again in a moment.');return;}
   prompt=prompt.trim();if(!prompt)return;
   const tab=state.tabs.find(t=>t.id===tabId);if(!tab)return;
   tab.failure=null;
@@ -159,10 +160,29 @@ function closePanel(){$('panel').hidden=true;$('panel-content').replaceChildren(
 function panel(title,kind){state.panel=kind;$('panel').hidden=false;$('panel-title').textContent=title;$('panel-content').replaceChildren();applySettingsTheme();return $('panel-content');}
 function paragraph(parent,text,cls='panel-note'){const p=document.createElement('p');p.className=cls;p.textContent=text;parent.append(p);return p;}
 function action(parent,text,fn){const b=document.createElement('button');b.className='secondary';b.textContent=text;b.onclick=fn;parent.append(b);return b;}
-async function showHistory(){if(state.panel==='history'){closePanel();return;}await refreshStatus();const content=panel('Recent pages','history');paragraph(content,'New pages are cached for 24 hours and expire on a later launch. Bookmark pages to keep them. Your older archive is preserved.');if(!state.status?.history.length)paragraph(content,'Your first destination is waiting in the address bar.');for(const item of state.status?.history||[]){const button=document.createElement('button');button.className='history-item';const title=document.createElement('strong');title.textContent=item.title;const desc=document.createElement('small');desc.textContent=item.prompt+' · '+new Date(item.created*1000).toLocaleDateString();button.append(title,desc);button.onclick=()=>openSavedPage(item.id);content.append(button);}}
+async function showHistory(){if(state.panel==='history'){closePanel();return;}await refreshStatus();const content=panel('Recent pages','history');paragraph(content,'New pages are cached for 24 hours and expire on a later launch. Bookmark pages to keep them. Your older archive is preserved until you clear history.');action(content,'Clear history…',confirmClearHistory);if(!state.status?.history.length)paragraph(content,'Your first destination is waiting in the address bar.');for(const item of state.status?.history||[]){const button=document.createElement('button');button.className='history-item';const title=document.createElement('strong');title.textContent=item.title;const desc=document.createElement('small');desc.textContent=item.prompt+' · '+new Date(item.created*1000).toLocaleDateString();button.append(title,desc);button.onclick=()=>openSavedPage(item.id);content.append(button);}}
+function confirmClearHistory(){
+  const content=panel('Clear history?','clear-history');
+  paragraph(content,'Permanently delete recent history, cached pages, the older archive and their generation records. Back/Forward history will reset and unbookmarked open pages will become blank. Bookmarks and exported HTML stay saved.');
+  action(content,'Keep history',()=>{state.panel=null;showHistory();});
+  const remove=action(content,'Delete history',async()=>{
+    if(state.job||state.starting||state.stopping||state.pending.length){toast('Finish or stop pending page generation before clearing history.');return;}
+    if(state.clearingHistory)return;
+    state.clearingHistory=true;state.historyEpoch++;remove.disabled=true;
+    try{
+      const result=await api('history/clear',{confirmed:true});
+      const keep=new Set(result.bookmarks);
+      for(const tab of state.tabs){const page=tab.pages[tab.index];tab.pages=page&&keep.has(page.id)?[page]:[];tab.index=tab.pages.length-1;delete tab.failure;delete tab.request;}
+      state.lastPrompt='';state.queued=null;state.progress=null;state.validation=null;$('validation-frame').removeAttribute('srcdoc');
+      renderSaved();closePanel();await showHistory();toast('History deleted. Bookmarks kept.');
+    }catch(e){toast(e.message);}finally{state.clearingHistory=false;remove.disabled=false;}
+  });
+}
 async function openSavedPage(id){
+  if(state.clearingHistory)return;
+  const epoch=state.historyEpoch;
   const tab=current();if(!tab)return;
-  try{await captureView();state.pending=state.pending.filter(p=>p.tab!==tab.id);if(state.job&&state.jobTab===tab.id)await stop(false);const page=await api('pages/'+id);if(!state.tabs.includes(tab))return;tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(page);tab.index=tab.pages.length-1;if(state.current===tab.id){renderSaved();closePanel();}drawTabs();drainQueue();}catch(e){toast(e.message);}
+  try{await captureView();state.pending=state.pending.filter(p=>p.tab!==tab.id);if(state.job&&state.jobTab===tab.id)await stop(false);const page=await api('pages/'+id);if(!state.tabs.includes(tab)||epoch!==state.historyEpoch)return;tab.pages=tab.pages.slice(0,tab.index+1);tab.pages.push(page);tab.index=tab.pages.length-1;if(state.current===tab.id){renderSaved();closePanel();}drawTabs();drainQueue();}catch(e){toast(e.message);}
 }
 async function toggleBookmark(){const page=saved();if(!page||state.displayed?.job)return;try{const enabled=!state.status?.bookmarks?.some(p=>p.id===page.id);await api('bookmark',{id:page.id,enabled});await refreshStatus();toast(enabled?'Bookmarked permanently on this computer.':'Bookmark removed. The page remains in the temporary cache.');}catch(e){toast(e.message);}}
 async function showBookmarks(){if(state.panel==='bookmarks'){closePanel();return;}await refreshStatus();const content=panel('Bookmarks','bookmarks');paragraph(content,'Saved permanently on this computer. Use the star or Ctrl+D to save the current page.');for(const item of state.status?.bookmarks||[]){action(content,item.title,()=>openSavedPage(item.id));}if(!state.status?.bookmarks?.length)paragraph(content,'No bookmarks yet.');}

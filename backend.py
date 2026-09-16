@@ -139,6 +139,29 @@ class App:
                 self.bookmarks.pop(page_id,None)
         return {'bookmarked':enabled}
 
+    def clear_history(self):
+        with self.lock:
+            if any(job['thread'].is_alive() for job in self.jobs.values()):
+                raise ValueError('Wait for the page to finish, or stop generation before clearing history.')
+            # Only remove this application's page snapshots/traces. Bookmarks,
+            # exports, settings, credentials and model files are outside this set.
+            paths=[]
+            for name in ('cache','pages'):
+                folder=(self.data/name).resolve()
+                if folder.parent!=self.data.resolve(): raise ValueError('Unexpected history folder location.')
+                for path in folder.glob('*.json'):
+                    if re.fullmatch(r'[0-9a-f]{32}(?:\.trace)?\.json',path.name):
+                        if path.resolve().parent!=folder: raise ValueError('Unexpected history file location.')
+                        paths.append(path)
+            for path in paths: path.unlink(missing_ok=True)
+            atomic_json(self.data/'history.json',[])
+            atomic_json(self.data/'domains.json',{})
+            self.pages=[]
+            self.domains={}
+            self.jobs.clear()
+            self.active=None
+            return {'cleared':True,'bookmarks':list(self.bookmarks)}
+
     def snapshot(self, job):
         with self.lock:
             return copy.deepcopy({k:v for k,v in job.items() if k not in ('cancel','rendered','thread','raw','context','runner')})
@@ -441,6 +464,9 @@ class App:
                     elif self.path=='/api/bookmark':
                         if not isinstance(body.get('enabled'),bool): raise ValueError('Expected bookmark state.')
                         self.send(200,app.bookmark(body.get('id'),body['enabled']))
+                    elif self.path=='/api/history/clear':
+                        if body.get('confirmed') is not True: raise ValueError('Confirm clearing history first.')
+                        self.send(200,app.clear_history())
                     elif self.path=='/api/export':
                         page=app.load_page(body.get('id'))
                         path=app.data/'exports'/f"{page['id']}.html"

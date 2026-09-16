@@ -69,6 +69,39 @@ class DocumentTests(unittest.TestCase):
         with self.assertRaises(ValueError):sanitize(BASE+'<div>'*60+'nested'+'</div>'*60)
 
 class ApiTests(unittest.TestCase):
+    def test_clear_history_removes_snapshots_but_preserves_bookmarks_and_exports(self):
+        pid='d'*32
+        page={**sanitize(BASE),'id':pid,'title':'Saved library','prompt':'library','created':0,'capability':'cap'}
+        (self.app.data/'cache'/f'{pid}.json').write_text(json.dumps(page))
+        (self.app.data/'cache'/f'{pid}.trace.json').write_text(json.dumps({'original_html':BASE}))
+        self.app.bookmark(pid,True)
+        for folder in ('pages','cache'):
+            (self.app.data/folder/('e'*32+'.json')).write_text('{}')
+            (self.app.data/folder/('e'*32+'.trace.json')).write_text('{}')
+        export=self.app.data/'exports'/'saved.html';export.write_text('keep')
+        self.app.pages=[{'id':pid}];self.app.domains={'library':{'title':'Old world'}}
+        result=self.app.clear_history()
+        self.assertEqual(result['bookmarks'],[pid])
+        self.assertFalse(list((self.app.data/'cache').glob('*.json')))
+        self.assertFalse(list((self.app.data/'pages').glob('*.json')))
+        self.assertEqual(export.read_text(),'keep')
+        self.assertTrue((self.app.data/'bookmarks'/f'{pid}.trace.json').exists())
+        self.app.stop();self.app=App(self.app.data,start_engine=False)
+        self.assertEqual(self.app.status()['history'],[])
+        self.assertEqual(self.app.domains,{})
+        self.assertEqual(self.app.load_page(pid)['title'],'Saved library')
+
+    def test_clear_history_requires_authorized_confirmation_and_idle_worker(self):
+        from unittest.mock import Mock
+        headers={'X-Elsewhere-Token':self.app.token,'Origin':self.app.origin}
+        path='/api/history/clear'
+        self.assertEqual(self.request(path,'POST',{'confirmed':True})[0],403)
+        self.assertEqual(self.request(path,'POST',{'confirmed':False},headers)[0],400)
+        self.app.jobs['finishing']={'thread':Mock(is_alive=lambda:True)}
+        self.assertEqual(self.request(path,'POST',{'confirmed':True},headers)[0],400)
+        self.app.jobs.clear()
+        self.assertEqual(self.request(path,'POST',{'confirmed':True},headers)[0],200)
+
     def test_router_endpoint_requires_auth_origin_and_never_returns_key(self):
         body={'provider':'openai','model':'gpt-6-astra','api_key':'test-secret','cloud_consent':True}
         self.assertEqual(self.request('/api/router','POST',body)[0],403)

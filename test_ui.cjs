@@ -135,5 +135,17 @@ async function main(){
   assert.equal(elements.get('panel').attributes['data-dark'],'false');
   assert.ok(!descendants(elements.get('panel-content')).includes(password));
   console.log('PASS: dark mode is Settings-only and key entry is masked, transient and disclosed');
+
+  vm.runInContext("state.job=null;state.starting=false;state.stopping=null;state.pending=[];state.tabs=[{id:'tab-one',pages:[{id:'private',title:'Private',html:'private'}],index:0},{id:'tab-two',pages:[{id:'private'},{id:'kept',title:'Kept',html:'kept'}],index:1}];state.current='tab-one';confirmClearHistory()",context);
+  assert.equal(calls.filter(c=>c.url==='/api/history/clear').length,0,'opening confirmation must not clear data');
+  responses.set('/api/history/clear',{cleared:true,bookmarks:['kept']});
+  const deletion=descendants(elements.get('panel-content')).find(node=>node.textContent==='Delete history');
+  await deletion.onclick();
+  assert.equal(calls.filter(c=>c.url==='/api/history/clear').length,1);
+  assert.equal(vm.runInContext('state.tabs[0].pages.length',context),0);
+  assert.equal(vm.runInContext('state.tabs[1].pages.length',context),1);
+  assert.equal(vm.runInContext('state.tabs[1].pages[0].id',context),'kept');
+  assert.equal(vm.runInContext('state.clearingHistory',context),false);
+  console.log('PASS: clearing history requires confirmation and resets tab history while retaining bookmarks');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

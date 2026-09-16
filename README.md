@@ -24,6 +24,7 @@ After updating source files, close and reopen Elsewhere. Setup does not need to 
 - **New tab / Ctrl+T:** open another blank page. Switch freely while another tab builds; finished pages, history and bookmarks stay usable. Up to eight tabs; one model task at a time. New requests in other tabs queue automatically, with the latest request retained per tab. Completion never switches your selected tab.
 - **Stop / Escape:** cancel the selected tab's model call and retain its previous page. Queued requests in other tabs continue afterward.
 - **History:** reopen recent cached pages and the preserved pre-update archive. New unbookmarked pages expire after 24 hours, cleaned up on a later launch.
+- **History → Clear history…:** confirm deletion of history, cached/archived pages and their generation records. Back/Forward resets and unbookmarked open pages become blank. Bookmarks and exported HTML are kept. Finish or stop generation first.
 - **Star / Ctrl+D:** bookmark the current finished page permanently on this computer. The Bookmarks button lists saved pages. Click the filled star to return a bookmark to temporary storage.
 - **Page details:** inspect timing, seed, review results, source HTML, and the full generation record. Export saves a standalone HTML file in the local `exports` directory.
 

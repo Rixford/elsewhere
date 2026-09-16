@@ -1,5 +1,6 @@
 # Local update after rev0
 
+- Add History → Clear history with confirmation; delete cached/archived history and traces while preserving bookmarks and exports, and reset tab history. Active generation must finish or stop first.
 - Add optional OpenAI Responses and Anthropic Claude Messages routing in Settings; local Qwen remains the default on every launch.
 - Keep API keys in backend session memory only, disclose cloud data transfer and billing, and retain the selected provider/model throughout each job.
 - Handle current streaming formats, Claude workspace headers and structured refusals; keep generated-page network restrictions and never fall back to another provider automatically.

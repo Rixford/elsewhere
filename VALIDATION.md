@@ -1,3 +1,9 @@
+# Clear-history option validation
+
+- Added two Python checks for confirmed/authenticated deletion, rejection while a worker is running, removal of cache/archive snapshots and traces, and bookmark/export retention after restart. Existing Python checks also passed (41 tests total).
+- All ten JavaScript regression scenarios pass, including opening confirmation without deleting, then clearing tab navigation while retaining a bookmarked current page. Script syntax and diff checks pass.
+- Tests used temporary data only; the user's saved history was not cleared.
+
 # Optional cloud router / Settings theme validation
 
 - 39 Python tests and nine JavaScript regression scenarios pass. CI includes the cloud adapter tests; they use simulated HTTPS/SSE responses and never call paid APIs.
