@@ -159,9 +159,11 @@ class Engine:
                 if not result:
                     raise RuntimeError('The local model returned no page.')
                 return ''.join(result), {'seconds': round(time.monotonic() - started, 2), 'finish': finish, 'characters': sum(map(len, result))}
-            except Exception:
+            except Exception as exc:
+                exc.partial_text=''.join(result)
                 if cancel.is_set():
-                    raise Cancelled() from None
+                    failure=Cancelled();failure.partial_text=''.join(result)
+                    raise failure from None
                 raise
             finally:
                 self.connection = None

@@ -1,8 +1,8 @@
 # Elsewhere
 
-A local imagination browser for Windows. Open **Start Elsewhere.vbs**, type anything in the address bar, and let the model render its learned impression of a website or concept. Familiar domains can evoke recognizable layouts and identities; unfamiliar ideas invite invention. No actual website is fetched or used as a reference.
+A closed-book visual evaluation workspace and imagination browser for Windows. Give a model a URL, thought, concept, search, or a request to transfer a familiar design to a new subject. It expresses its learned understanding as HTML/CSS/SVG. No target website is fetched or used as a reference.
 
-The application opens on an empty page. The status at bottom left tells you when the local model is ready.
+The application opens in **Evaluate**. **Explore** retains the imagination browser and starts with an empty page. The status at bottom left tells you when the local model is ready.
 
 ## Install
 
@@ -23,6 +23,18 @@ Fork or clone the source, run setup on your own computer, then choose your theme
 See [PRIVACY.md](PRIVACY.md) before sharing diagnostics or packaging a fork. The public `rev0` tag preserves the initial release; `main` contains the subsequent improvements.
 
 ## Use
+
+### Evaluate
+
+1. Choose **Familiar website**, **Thought or concept**, **Search or question**, or **Transfer / reinterpretation**. Type your prompt and any criteria the model should follow. The example set covers all four.
+2. Choose 1–5 attempts for each of up to six tasks, an output budget, and a starting local seed. Choose the model in Settings. Cloud runs show their planned call count and require acknowledgment of API charges.
+3. Run the evaluation. Every attempt uses fresh context, a fixed instruction prompt and 1280 × 720 / 640 × 720 measurements. Original responses are saved before sanitation; no automatic model repair or retry runs. Optional advisory review is a separate call that never edits the result.
+4. Inspect every outcome, including failures. Rate intent, criteria, identity/transfer, coherence and visual clarity yourself. Ratings and code checks remain separate. Model labels can be hidden in reports; this is not guaranteed blinding for someone who chose the model.
+5. Reuse the tasks with another model and compare saved runs. Different task/protocol fingerprints show a comparability warning. Export a content-free summary or explicitly opt into a full private record.
+
+Evaluation records are kept locally until deleted from the report, independently of Explore history and bookmarks. Only native HTML controls work in evaluation previews; Explore's layout repairs and simulated interactions are disabled. You can browse Explore while a run is working; new model requests queue until it finishes. See [the evaluation protocol and limitations](docs/EVALUATION.md).
+
+### Explore
 
 - **Address bar / Ctrl+L:** enter a place, idea, phrase, or address.
 - **Links:** continue within the same imagined site, carrying the seed identity/style, the previous page, and the clicked label with nearby text. Local section links scroll within the page. During review, the latest navigation click queues with visible feedback and survives switching tabs; Stop cancels it.
@@ -76,6 +88,7 @@ Generated pages are isolated in a sandbox without same-origin access. HTML/SVG a
 - `pages/<id>.trace.json`: prompt, context, seed, original model output, review, any repair, and timings.
 - `history.json`, `domains.json`, `settings.json`: local browsing state.
 - `exports/`: standalone HTML exports.
+- `evaluations/<id>.json`: durable evaluation specification, original responses, checks and run metadata; `<id>.ratings.json` stores human ratings separately. These files can contain private prompts and are excluded from Git.
 - `logs/model.log`, `logs/app.log`: local diagnostics.
 
 The active window starts blank on each launch; prior pages remain in History. Closing the app stops its owned model process. A second launch does not load a second model. New unbookmarked cache entries are removed on startup once older than 24 hours. Bookmarks and the older pages archive are never expired automatically. Form state is held in memory for Back/Forward; password and email field values are excluded. “Repeat seed” reuses the seed, but exact regeneration is not guaranteed across hardware or changed context; a saved snapshot is the exact original.
@@ -87,10 +100,13 @@ To explore surprising behavior, compare the same entries with continuity memory 
 Python dependencies are isolated under the data directory. Node.js is needed only for JavaScript development checks. Run tests using the interpreter at `<runtime-path>/python/Scripts/python.exe`:
 
 ```text
-python -m unittest -v test_core test_cloud
+python -m unittest -v test_core test_cloud test_evaluation
 node test_ui.cjs
+node test_evaluate_ui.cjs
 node --check web/app.js
 node --check web/page-controller.js
+node --check web/evaluate.js
+node --check web/evaluation-controller.js
 python test_browser.py  # optional deterministic interactive fixture, no model
 ```
 

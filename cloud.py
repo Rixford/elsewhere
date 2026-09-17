@@ -188,11 +188,16 @@ class CloudEngine(Engine):
                 if not pieces: raise ProviderError('The provider returned no usable text.')
                 safe_usage={k:v for k,v in usage.items() if k in ('input_tokens','output_tokens','total_tokens','cache_read_input_tokens','cache_creation_input_tokens') and isinstance(v,int)}
                 return ''.join(pieces), {'seconds':round(time.monotonic()-started,2),'finish':finish,'characters':count,'usage':safe_usage}
-            except ProviderError:
+            except ProviderError as exc:
+                exc.partial_text=''.join(pieces)
                 raise
             except Exception:
-                if cancel.is_set(): raise Cancelled() from None
-                raise ProviderError('The cloud request could not complete. Check your connection or provider status; no automatic retry was made.') from None
+                if cancel.is_set():
+                    failure=Cancelled();failure.partial_text=''.join(pieces)
+                    raise failure from None
+                failure=ProviderError('The cloud request could not complete. Check your connection or provider status; no automatic retry was made.')
+                failure.partial_text=''.join(pieces)
+                raise failure from None
             finally:
                 deadline.cancel()
                 self.connection=None

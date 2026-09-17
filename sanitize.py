@@ -65,7 +65,7 @@ def unwrap_markdown(raw):
     start = re.search(r'<!doctype\s+html|<html[\s>]|<head[\s>]|<body[\s>]|<style[\s>]|<main[\s>]|<div[\s>]', raw, re.I)
     return raw[start.start():] if start else raw
 
-def sanitize(raw, capability='preview', title_fallback='An imagined place', script_nonce=None):
+def sanitize(raw, capability='preview', title_fallback='An imagined place', script_nonce=None, evaluation=False):
     if len(raw) > 180_000:
         raise ValueError('The page exceeded the size limit.')
     parser = html5lib.HTMLParser(namespaceHTMLElements=False)
@@ -151,7 +151,8 @@ def sanitize(raw, capability='preview', title_fallback='An imagined place', scri
     base = ET.Element('style')
     head.insert(3,base)
     base.text = '*,*::before,*::after{box-sizing:border-box}html{overflow-wrap:anywhere}body{margin:0}svg{max-width:100%}input,button,select,textarea{font:inherit;min-width:0}button{flex-shrink:0;overflow-wrap:normal}button,a,summary{touch-action:manipulation}button,a{cursor:pointer}:focus-visible{outline:3px solid #787dff;outline-offset:3px}img{display:none} @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}'
-    code = (Path(__file__).parent / 'web' / 'page-controller.js').read_text(encoding='utf-8')
+    if evaluation: head.remove(base)
+    code = (Path(__file__).parent / 'web' / ('evaluation-controller.js' if evaluation else 'page-controller.js')).read_text(encoding='utf-8')
     import json
     script = ET.SubElement(body, 'script', {'nonce': nonce})
     script.text = code.replace('__CAPABILITY__', json.dumps(capability))

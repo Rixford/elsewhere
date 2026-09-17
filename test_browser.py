@@ -25,6 +25,9 @@ class FixtureEngine:
     process=None
     def interrupt(self): pass
     def stop(self): pass
+    def complete(self,messages,cancel,**kwargs):
+        if cancel.wait(.5):raise Cancelled()
+        return PAGE, {'finish':'stop','seconds':.5,'characters':len(PAGE)}
     def generate(self,prompt,context,cancel,seed,progress,repair=None):
         raw=PAGE if not prompt.startswith('Ascend') else '<html><body><h1>Arrived</h1><p>'+html.escape(prompt)+'</p></body></html>'
         return raw, {'finish':'stop','seconds':0,'characters':len(raw)}

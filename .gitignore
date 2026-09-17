@@ -23,6 +23,7 @@ webview/
 .local/
 cache/
 bookmarks/
+evaluations/
 logs/
 instance.lock
 credentials*.json

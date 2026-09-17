@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 from engine import Engine, Cancelled, GENERATE, REVIEW
 from cloud import CloudEngine, ProviderError, ProviderRefusal, PRESETS, checked_route
 from sanitize import sanitize
+from evaluation import EvaluationMixin
 
 ROOT = Path(__file__).resolve().parent
 TERMINAL = {'done','error','cancelled'}
@@ -31,7 +32,7 @@ def site_identity(page):
     return {'root_page':page.get('id'),'entry':page.get('prompt',''),'title':page.get('title',''),
             'content':page.get('text','')[:3000], 'style_css':'\n'.join(css[1:] if len(css)>1 else css)[:3000]}
 
-class App:
+class App(EvaluationMixin):
     def __init__(self, data, start_engine=True):
         self.data = Path(data)
         self.data.mkdir(parents=True, exist_ok=True)
@@ -60,6 +61,7 @@ class App:
         self.domains = {}
         self.pages = []
         self.bookmarks = {}
+        self.recover_evaluations()
         for path in (self.data/'bookmarks').glob('*.json'):
             if path.name.endswith('.trace.json'): continue
             try:
@@ -433,7 +435,10 @@ class App:
                         self.send(200,app.snapshot(job)) if job else self.send(404,{'error':'Job not found.'})
                     elif path.startswith('/api/pages/'):
                         self.send(200,app.load_page(path.rsplit('/',1)[-1]))
-                    elif path in ('/','/index.html','/app.js','/app.css'):
+                    elif path == '/api/evaluations': self.send(200,app.list_evaluations())
+                    elif path.startswith('/api/evaluations/'):
+                        self.send(200,app.read_evaluation(path.rsplit('/',1)[-1]))
+                    elif path in ('/','/index.html','/app.js','/app.css','/evaluate.js'):
                         name='index.html' if path=='/' else path[1:]
                         self.send(200,(ROOT/'web'/name).read_bytes(),mimetypes.guess_type(name)[0]+'; charset=utf-8')
                     else: self.send(404,{'error':'Not found.'})
@@ -443,10 +448,15 @@ class App:
                 if not self.authorized(): return
                 try:
                     length=int(self.headers.get('Content-Length','0'))
-                    if not 0 < length <= 25000: raise ValueError('Request is too large or empty.')
+                    limit=90000 if self.path=='/api/evaluations/start' else 25000
+                    if not 0 < length <= limit: raise ValueError('Request is too large or empty.')
                     body=json.loads(self.rfile.read(length))
                     if not isinstance(body,dict): raise ValueError('Expected an object.')
-                    if self.path=='/api/generate': self.send(200,app.start_job(body))
+                    if self.path=='/api/evaluations/start': self.send(200,app.start_evaluation(body))
+                    elif self.path=='/api/evaluations/rate': self.send(200,app.rate_evaluation(body))
+                    elif self.path=='/api/evaluations/export': self.send(200,app.export_evaluation(body))
+                    elif self.path=='/api/evaluations/delete': self.send(200,app.delete_evaluation(body))
+                    elif self.path=='/api/generate': self.send(200,app.start_job(body))
                     elif self.path=='/api/cancel':
                         job=app.jobs.get(body.get('id'))
                         app.cancel(body.get('id'))

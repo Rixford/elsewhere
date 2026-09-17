@@ -1,11 +1,11 @@
 [
   {
     "File": ".github/workflows/checks.yml",
-    "Hash": "3d65e9f5770eedcf8499cc76f15366b93a59f8c575abfd7c19ed896e4eaaeb14"
+    "Hash": "a3cd2f4bed7fa11cec8acbb45acec9ccaa810f22e4a41d9c589c0fa419a79d46"
   },
   {
     "File": ".gitignore",
-    "Hash": "4e2a1b1b3f280c3fb6699b33703e84f7ef39fef55c4502df87ba4f3c43bd9195"
+    "Hash": "b4661b7f299b4ab050ac320dea89324cdf0457bb911315d8f566b53a36e631dc"
   },
   {
     "File": "app.py",
@@ -13,15 +13,19 @@
   },
   {
     "File": "backend.py",
-    "Hash": "28867dbb61c18cdf1a2df591baa5a13cb6acc350e02a5085a8c9ae6dd5cf235a"
+    "Hash": "8acfde324bdfe39dfe54e4e2ee4e40cb09142ee11c66ad98f8551179684ab857"
   },
   {
     "File": "CHANGELOG.md",
-    "Hash": "ad64c9595f52eb217ee8b9d93d60794739626de31ce1c70b828503608011b54d"
+    "Hash": "7c6e20bf345e2aa055baa967ea4a7898b9f1095e4628121bc5116a0a93c215e1"
   },
   {
     "File": "cloud.py",
-    "Hash": "2ac5c6c6ee369eec1e0c7cca3550a6afb8adde390e4446968c55ca1faf1c5147"
+    "Hash": "b21ff6a0653dd55d48a12762372a8d5a821fd0d28bf194f01e92c16d16154d29"
+  },
+  {
+    "File": "docs/EVALUATION.md",
+    "Hash": "5fa8360bf6593b590064a713c0b7b89bae54b2f4e94c997a78102b1431c234c5"
   },
   {
     "File": "docs/LAUNCH_POSTS.md",
@@ -33,7 +37,11 @@
   },
   {
     "File": "engine.py",
-    "Hash": "5fc8e4c340d3692eb164e086f7bcf97a76b6d8e75917e9cdc23d7a07df981568"
+    "Hash": "fd736ac377ebb63fa4aeaabce2ac782a8f99de3257dccf1641a16695d1c153d2"
+  },
+  {
+    "File": "evaluation.py",
+    "Hash": "c6c7945f0ed9eba6221151b6d35f83a7cbc543fc16878fa7f8f26c29fb34e827"
   },
   {
     "File": "examples/README.md",
@@ -53,11 +61,11 @@
   },
   {
     "File": "PRIVACY.md",
-    "Hash": "2d566b1fdf9b013a248c365b502c83862013da875da049f91d504bc9daa58350"
+    "Hash": "716b3802edf1b6a63e1c831afe7592691f032a725ee4a7d8af138498b20bbcf6"
   },
   {
     "File": "README.md",
-    "Hash": "4b0334f0c4ca589b1076127557326f30c9c6e775bb46b76b9047a0e7e045d6e3"
+    "Hash": "b4aaf216e6b8ec4198c762e3dc30fc0cef86c231268b73125b9e5aac8622a0ec"
   },
   {
     "File": "requirements.txt",
@@ -65,7 +73,7 @@
   },
   {
     "File": "sanitize.py",
-    "Hash": "2b2c857f3c5b302e62b967bafd445d63718e046de3da4bf6694a2d40ebf7cb0d"
+    "Hash": "99de0b1b1d5266780d0a254255e3e5fd11da67ec225e88cf7b3c3c9b1c7e0423"
   },
   {
     "File": "Setup Elsewhere.cmd",
@@ -81,7 +89,7 @@
   },
   {
     "File": "test_browser.py",
-    "Hash": "f3a7e53ba0a5cd83a46239210264d8f5f18318dccf2a72bc7610c3c9491f1059"
+    "Hash": "a9a82780c8f26c2b33186f2178c35110efcce369c1c27aed06c1c631b0f1ae76"
   },
   {
     "File": "test_cloud.py",
@@ -90,6 +98,14 @@
   {
     "File": "test_core.py",
     "Hash": "58afe4b6f81d064982f323e7919a7283464ad24ba14086f1c7ea588493260bcd"
+  },
+  {
+    "File": "test_evaluate_ui.cjs",
+    "Hash": "2bf8f441d9e982eb22bb288032d03bc5dcf03b4bec7977da4a99acafcd3219e1"
+  },
+  {
+    "File": "test_evaluation.py",
+    "Hash": "1bc65b68f9d11a02b593b05366ec056557277229513de48df5dd3160e535a213"
   },
   {
     "File": "test_ui.cjs",
@@ -101,19 +117,27 @@
   },
   {
     "File": "VALIDATION.md",
-    "Hash": "8d7cd9ceed5b0c7e01237c15004337f373f8f5aa4dd40c30d9ecd998d8391864"
+    "Hash": "9632abbd731819c3cf0abc4d40934ae63685560c9339109430d2b58a8021f3f5"
   },
   {
     "File": "web/app.css",
-    "Hash": "fcd34e60a67764f149e0ed471b96a54df3e382e0ca254401dc178b5dd6f98a3c"
+    "Hash": "8563cb366129e2242eaaf04217337a8ad37be1501c721811ae55479d8059fe87"
   },
   {
     "File": "web/app.js",
-    "Hash": "ebd424b6187ea5b627712041afb7b5bf3bbf57cc5fe4df55dcebefeaa12291a3"
+    "Hash": "f399027edc0982a2363ea308677c10fbb2e482c814a4084aaecb49b5d85a75f9"
+  },
+  {
+    "File": "web/evaluate.js",
+    "Hash": "d03c0c8cb2aa1029e5df7a67e42ead36631fd31933edd73af06b30f305b4a2a2"
+  },
+  {
+    "File": "web/evaluation-controller.js",
+    "Hash": "a6030368e475131d77addc58030cc9b8544bec4805cad5953ab28c0e1106a5e1"
   },
   {
     "File": "web/index.html",
-    "Hash": "9f77bcc8ba7b1b81c8fd5aa967c725540e8c6fbabd2df325a7da059074e3a2d3"
+    "Hash": "48ec84d0bb84fc24294558737c6a9a1ca92f1e72f123ffc11797dec2e5dfd72e"
   },
   {
     "File": "web/page-controller.js",

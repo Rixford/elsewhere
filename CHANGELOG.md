@@ -1,3 +1,13 @@
+# Closed-book evaluation workspace
+
+- Make Evaluate the initial workspace; retain the existing browser under Explore.
+- Support websites, thoughts/concepts, searches/questions and transfer tasks with user-written criteria, 1–5 repetitions and bounded output budgets.
+- Preserve original/partial model responses, exact messages and hashes; use fresh context, fixed wide/narrow frames and no automatic repair.
+- Keep evaluation rendering separate from Explore's CSS fixes and simulated controls; retain sandbox/network restrictions.
+- Add durable local run records, interrupted-run recovery, per-attempt inspection, optional advisory review, separate human ratings, comparisons and reusable task sets.
+- Record timing and available usage; estimate costs only from user-entered prices. Require per-run cloud-charge acknowledgment, and explicit acknowledgment for full-content exports.
+- Add content-free summary exports and explicit evaluation deletion while keeping Explore history independent.
+
 # Local update after rev0
 
 - Add portable setup/preference examples, privacy and safe-sharing guidance, and reusable launch-post drafts. Extend Git exclusions for common credential and diagnostic files.
