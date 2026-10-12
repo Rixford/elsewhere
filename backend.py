@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import mimetypes
 import os
@@ -14,7 +15,6 @@ from urllib.parse import urlsplit
 from engine import Engine, Cancelled, GENERATE, REVIEW
 from cloud import CloudEngine, ProviderError, ProviderRefusal, PRESETS, checked_route
 from sanitize import sanitize
-from evaluation import EvaluationMixin
 
 ROOT = Path(__file__).resolve().parent
 TERMINAL = {'done','error','cancelled'}
@@ -32,7 +32,7 @@ def site_identity(page):
     return {'root_page':page.get('id'),'entry':page.get('prompt',''),'title':page.get('title',''),
             'content':page.get('text','')[:3000], 'style_css':'\n'.join(css[1:] if len(css)>1 else css)[:3000]}
 
-class App(EvaluationMixin):
+class App:
     def __init__(self, data, start_engine=True):
         self.data = Path(data)
         self.data.mkdir(parents=True, exist_ok=True)
@@ -61,7 +61,9 @@ class App(EvaluationMixin):
         self.domains = {}
         self.pages = []
         self.bookmarks = {}
-        self.recover_evaluations()
+        # Old evaluation files are deliberately left untouched on disk.
+        self.source_hashes = {name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
+                              for name in ('backend.py','engine.py','cloud.py','sanitize.py','web/page-controller.js')}
         for path in (self.data/'bookmarks').glob('*.json'):
             if path.name.endswith('.trace.json'): continue
             try:
@@ -75,7 +77,7 @@ class App(EvaluationMixin):
                     if name == 'settings':
                         self.settings.update({k:bool(value[k]) for k in self.settings if k in value})
                     elif name == 'domains': self.domains = value
-                    else: self.pages = [p for p in value if self.page_path(p.get('id','')) is not None][:300]
+                    else: self.pages = [p for p in value if self.page_path(p.get('id','')) is not None]
             except (OSError,ValueError):
                 pass
         self.server = ThreadingHTTPServer(('127.0.0.1',0), self.handler())
@@ -122,8 +124,9 @@ class App(EvaluationMixin):
 
     def bookmark(self, page_id, enabled):
         with self.lock:
-            page=self.load_page(page_id)
             source=self.page_path(page_id)
+            if source is None: raise ValueError('Page not found.')
+            page=json.loads(source.read_text(encoding='utf-8'))
             target=self.data/'bookmarks'/f'{page_id}.json'
             trace=source.with_name(f'{page_id}.trace.json')
             if enabled:
@@ -131,14 +134,17 @@ class App(EvaluationMixin):
                 if trace.exists(): atomic_json(target.with_name(trace.name),json.loads(trace.read_text(encoding='utf-8')))
                 self.bookmarks[page_id]={k:page[k] for k in ('id','title','prompt','created')}
             elif target.exists():
-                # Unbookmark returns the snapshot to cache, preserving Back.
-                atomic_json(self.data/'cache'/target.name,page)
+                # Unbookmark restores durable history even after history clearing.
+                atomic_json(self.data/'pages'/target.name,page)
                 saved_trace=target.with_name(f'{page_id}.trace.json')
                 if saved_trace.exists():
-                    atomic_json(self.data/'cache'/saved_trace.name,json.loads(saved_trace.read_text(encoding='utf-8')))
+                    atomic_json(self.data/'pages'/saved_trace.name,json.loads(saved_trace.read_text(encoding='utf-8')))
                     saved_trace.unlink()
                 target.unlink()
                 self.bookmarks.pop(page_id,None)
+                if not any(p['id']==page_id for p in self.pages):
+                    self.pages.insert(0,{k:page[k] for k in ('id','title','prompt','created','seconds','seed') if k in page})
+                    atomic_json(self.data/'history.json',self.pages)
         return {'bookmarked':enabled}
 
     def clear_history(self):
@@ -192,7 +198,11 @@ class App(EvaluationMixin):
             for key in list(self.jobs)[:-7]:
                 if self.jobs[key]['state'] in TERMINAL:
                     del self.jobs[key]
-            parent = self.load_page(body.get('parent','')) if self.settings['memory'] and body.get('parent') else None
+            source_parent = self.load_page(body['parent']) if body.get('parent') else None
+            parent = source_parent if self.settings['memory'] else None
+            link = body.get('link') or {}
+            if not isinstance(link,dict): raise ValueError('Expected link context.')
+            link = {k:v[:limit] for k,limit in [('label',200),('destination',500),('excerpt',1000)] if isinstance((v:=link.get(k)),str)}
             entry = prompt.strip()
             domain=None
             if re.match(r'^(?:https?://)?[\w-]+(?:\.[\w-]+)+(?:[/?:#]|$)',entry):
@@ -214,9 +224,6 @@ class App(EvaluationMixin):
                             try: root=self.load_page(item['id'])
                             except (ValueError,OSError): pass
                             else: break
-                link=body.get('link') or {}
-                if not isinstance(link,dict): raise ValueError('Expected link context.')
-                link={k:v[:limit] for k,limit in [('label',200),('destination',500),('excerpt',1000)] if isinstance((v:=link.get(k)),str)}
                 context = {'site':site_identity(root),'previous_entry':parent['prompt'],'previous_title':parent['title'],'previous_content':parent.get('text','')[:1800], 'clicked_link':link}
                 destination=link.get('destination','')
                 linked_domain=None
@@ -236,6 +243,7 @@ class App(EvaluationMixin):
             jid = uuid.uuid4().hex
             job = {'id':jid,'prompt':entry,'world':key,'seed':seed,'state':'generating','stage':'Imagining your page','chars':0,'started':time.time(),'revision':0,'page':None,'review':None,'error':'','settings':dict(self.settings),'context':context,'cancel':threading.Event(),'rendered':threading.Event(),'layout':{},'repair':False}
             job.update(runner=runner,provider=route['provider'],model=route['model'])
+            job.update(parent_id=source_parent['id'] if source_parent else None,link=link)
             self.jobs[jid] = job
             self.active = jid
             worker = threading.Thread(target=self.run_job,args=(job,),daemon=True)
@@ -267,6 +275,8 @@ class App(EvaluationMixin):
         runner=job.get('runner',self.engine)
         provider=job.get('provider','local')
         trace = {'id':job['id'],'prompt':job['prompt'],'seed':job['seed'],'world':job['world'],'settings':job['settings'],'context':job['context'],'provider':provider,'model':job.get('model','Qwen3.5-4B-Q4_K_M'),'runtime':'llama.cpp b11007' if provider=='local' else 'official HTTPS API','started':job['started']}
+        trace.update(schema_version=1,parent_id=job.get('parent_id'),link=job.get('link',{}),source_sha256=self.source_hashes)
+        trace_path = self.data/'pages'/f"{job['id']}.trace.json"
         trace.update(generator_instructions=GENERATE,reviewer_instructions=REVIEW,sampling={'temperature':.9,'repair_temperature':.35,'review_temperature':.1,'top_p':.92,'top_k':40,'max_output_tokens':5200,'context_tokens':16384})
         if provider!='local': trace['sampling']={'generation_output_budget':9296,'seed_supported':False,'automatic_network_retries':0}
         try:
@@ -274,7 +284,10 @@ class App(EvaluationMixin):
             progress = lambda n: job.update(chars=n)
             raw, stats = runner.generate(job['prompt'],job['context'],job['cancel'],job['seed'],progress)
             trace['original_html'] = raw
+            trace['original_sha256'] = hashlib.sha256(raw.encode('utf-8')).hexdigest()
             trace['generation'] = stats
+            # Persist the model's response before parsing, reviewing or refining it.
+            atomic_json(trace_path,trace)
             issues = []
             structural_issues = False
             try:
@@ -329,6 +342,7 @@ class App(EvaluationMixin):
                     raw, stats = runner.generate(job['prompt'],job['context'],job['cancel'],job['seed'],progress,repair={'raw':raw,'issues':issues[:6]})
                     trace['repair_mode'] = 'full'
                 trace['repair_html'] = raw
+                trace['repair_sha256'] = hashlib.sha256(raw.encode('utf-8')).hexdigest()
                 trace['repair_reasons'] = issues
                 trace['repair_stats'] = stats
                 page = self.set_page(job, raw)
@@ -341,27 +355,52 @@ class App(EvaluationMixin):
             result = {**page,'id':job['id'],'prompt':job['prompt'],'world':job['world'],'seed':job['seed'],'created':time.time(),'seconds':round(time.time()-job['started'],1),'review':job['review'],'repaired':job['repair'],'settings':job['settings'],'layout':job['layout']}
             result['site']=copy.deepcopy(job['context']['site']) if job['context'] else site_identity(result)
             result.update(provider=provider,model=trace['model'])
+            result.update(parent_id=job.get('parent_id'),link=job.get('link',{}))
             result['parent']=job['context']['previous_entry'] if job['context'] else None
             with self.lock:
                 if job['cancel'].is_set(): raise Cancelled()
-                atomic_json(self.data/'cache'/f"{job['id']}.json",result)
+                atomic_json(self.data/'pages'/f"{job['id']}.json",result)
                 self.pages.insert(0,{k:result[k] for k in ('id','title','prompt','created','seconds','seed')})
-                self.pages = self.pages[:300]
                 atomic_json(self.data/'history.json',self.pages)
                 if job['settings']['memory']:
                     self.domains[job['world']] = {'title':page['title'],'established_content':page['text'][:2000], 'style_hint':re.search(r'<style[^>]*>(.*?)</style>',raw,re.S).group(1)[:1200] if re.search(r'<style[^>]*>(.*?)</style>',raw,re.S) else ''}
                     self.domains = dict(list(self.domains.items())[-80:])
                     atomic_json(self.data/'domains.json',self.domains)
-                job.update(state='done',stage='Ready',result=result)
                 trace['phase']='complete'
-        except Cancelled:
+                trace.update(state='done',error='',layout=job.get('layout',{}),seconds=round(time.time()-job['started'],2),stored_html_sha256=hashlib.sha256(page['html'].encode('utf-8')).hexdigest())
+                # A bookmark must never see a completed page before its record.
+                atomic_json(trace_path,trace)
+                job.update(state='done',stage='Ready',result=result)
+        except Cancelled as exc:
+            if getattr(exc,'partial_text',None): trace['partial_html']=exc.partial_text
             job.update(state='cancelled',stage='Stopped')
         except Exception as exc:
+            if getattr(exc,'partial_text',None): trace['partial_html']=exc.partial_text
+            if getattr(exc,'response_stats',None): trace['failed_response_stats']=exc.response_stats
             job.update(state='error',stage='Could not finish this page',error=str(exc))
         finally:
             job.pop('runner',None)
             trace.update(state=job['state'],error=job['error'],layout=job.get('layout',{}),seconds=round(time.time()-job['started'],2))
-            atomic_json(self.data/'cache'/f"{job['id']}.trace.json",trace)
+            if job['state'] != 'done': atomic_json(trace_path,trace)
+
+    def export_record(self, page_id):
+        """Export the stored snapshot, not a re-sanitized version of its HTML."""
+        with self.lock:
+            path = self.page_path(page_id)
+            if path is None: raise ValueError('Page not found.')
+            page = json.loads(path.read_text(encoding='utf-8'))
+            trace_path = path.with_name(f'{page_id}.trace.json')
+            trace = json.loads(trace_path.read_text(encoding='utf-8')) if trace_path.exists() else None
+            record = {'schema':'elsewhere.page-record','schema_version':1,'exported_at':time.time(),
+                      'page':page,'generation':trace,
+                      'stored_html_sha256':hashlib.sha256(page['html'].encode('utf-8')).hexdigest(),
+                      'notes':{'page_html':'Stored sanitized HTML, including app styling and interaction code. Browser-time DOM changes are not captured.',
+                               'generation_html':'Original model output and any refinement are separate. Treat source as untrusted text.',
+                               'missing_record':'Older pages may have no generation record.',
+                               'privacy':'Includes prompts, generated content and linked-page context. Review before sharing.'}}
+            target=self.data/'exports'/f'{page_id}.record.json'
+            atomic_json(target,record)
+            return {'path':str(target)}
 
     def load_page(self, page_id):
         if not re.fullmatch(r'[0-9a-f]{32}',str(page_id)):
@@ -435,10 +474,7 @@ class App(EvaluationMixin):
                         self.send(200,app.snapshot(job)) if job else self.send(404,{'error':'Job not found.'})
                     elif path.startswith('/api/pages/'):
                         self.send(200,app.load_page(path.rsplit('/',1)[-1]))
-                    elif path == '/api/evaluations': self.send(200,app.list_evaluations())
-                    elif path.startswith('/api/evaluations/'):
-                        self.send(200,app.read_evaluation(path.rsplit('/',1)[-1]))
-                    elif path in ('/','/index.html','/app.js','/app.css','/evaluate.js'):
+                    elif path in ('/','/index.html','/app.js','/app.css'):
                         name='index.html' if path=='/' else path[1:]
                         self.send(200,(ROOT/'web'/name).read_bytes(),mimetypes.guess_type(name)[0]+'; charset=utf-8')
                     else: self.send(404,{'error':'Not found.'})
@@ -448,15 +484,10 @@ class App(EvaluationMixin):
                 if not self.authorized(): return
                 try:
                     length=int(self.headers.get('Content-Length','0'))
-                    limit=90000 if self.path=='/api/evaluations/start' else 25000
-                    if not 0 < length <= limit: raise ValueError('Request is too large or empty.')
+                    if not 0 < length <= 25000: raise ValueError('Request is too large or empty.')
                     body=json.loads(self.rfile.read(length))
                     if not isinstance(body,dict): raise ValueError('Expected an object.')
-                    if self.path=='/api/evaluations/start': self.send(200,app.start_evaluation(body))
-                    elif self.path=='/api/evaluations/rate': self.send(200,app.rate_evaluation(body))
-                    elif self.path=='/api/evaluations/export': self.send(200,app.export_evaluation(body))
-                    elif self.path=='/api/evaluations/delete': self.send(200,app.delete_evaluation(body))
-                    elif self.path=='/api/generate': self.send(200,app.start_job(body))
+                    if self.path=='/api/generate': self.send(200,app.start_job(body))
                     elif self.path=='/api/cancel':
                         job=app.jobs.get(body.get('id'))
                         app.cancel(body.get('id'))
@@ -489,6 +520,8 @@ class App(EvaluationMixin):
                         path=app.data/'exports'/f"{page['id']}.html"
                         path.write_text(page['html'],encoding='utf-8')
                         self.send(200,{'path':str(path)})
+                    elif self.path=='/api/export-record':
+                        self.send(200,app.export_record(body.get('id')))
                     elif self.path=='/api/trace':
                         pid=body.get('id','')
                         if not re.fullmatch(r'[0-9a-f]{32}',pid): raise ValueError('Invalid page ID.')

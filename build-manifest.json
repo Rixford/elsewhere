@@ -1,11 +1,47 @@
 [
   {
     "File": ".github/workflows/checks.yml",
-    "Hash": "a3cd2f4bed7fa11cec8acbb45acec9ccaa810f22e4a41d9c589c0fa419a79d46"
+    "Hash": "9662a892d21ec46e5289ff506904f69ccc7c1485d175c0dfe7d3439a36199178"
   },
   {
     "File": ".gitignore",
     "Hash": "b4661b7f299b4ab050ac320dea89324cdf0457bb911315d8f566b53a36e631dc"
+  },
+  {
+    "File": "CHANGELOG.md",
+    "Hash": "ce04fdc06b325d12b4eab3aa015743add7c99bbb0cbc12436f0a67e0acda2415"
+  },
+  {
+    "File": "Elsewhere.ico",
+    "Hash": "aa3561718b45bc7fc05032004aba2d112fa9b0bd076799a6279a75150bf88ad6"
+  },
+  {
+    "File": "LICENSE",
+    "Hash": "124d663b72f1592e29f001985456d523e83d422561c2b3edca80fb10e1e877e0"
+  },
+  {
+    "File": "PRIVACY.md",
+    "Hash": "3d6b7c2bf16bf1c406cd5b07081e31c41ce54af8fcd7712b1b48f4a7da47a7f8"
+  },
+  {
+    "File": "README.md",
+    "Hash": "4534dd68235014edf90582c55bb519fd9da84ca30147da10b175a98a450705a5"
+  },
+  {
+    "File": "Setup Elsewhere.cmd",
+    "Hash": "2082fe47b09e02efae60b3dcd8e1ecc403af02a453275c00a9f16a93d25fe735"
+  },
+  {
+    "File": "Start Elsewhere.vbs",
+    "Hash": "6de7c383dbd5ff348d1db83cb2aff9d10280be1b416e5e35b78162142b86c649"
+  },
+  {
+    "File": "THIRD_PARTY.md",
+    "Hash": "f52a68126dde449fbf4603efddab7b5fb32f2c3f4860eb282c27c21f97109a38"
+  },
+  {
+    "File": "VALIDATION.md",
+    "Hash": "2c470ccf7885a47a216b35850ef811357ef0a95979aa01460359805093d1084b"
   },
   {
     "File": "app.py",
@@ -13,35 +49,23 @@
   },
   {
     "File": "backend.py",
-    "Hash": "8acfde324bdfe39dfe54e4e2ee4e40cb09142ee11c66ad98f8551179684ab857"
-  },
-  {
-    "File": "CHANGELOG.md",
-    "Hash": "7c6e20bf345e2aa055baa967ea4a7898b9f1095e4628121bc5116a0a93c215e1"
+    "Hash": "68c1ee62b077a63016d54f38cc285be9760fcd7e82e028d8ba2b593f7d4f6a2e"
   },
   {
     "File": "cloud.py",
-    "Hash": "b21ff6a0653dd55d48a12762372a8d5a821fd0d28bf194f01e92c16d16154d29"
-  },
-  {
-    "File": "docs/EVALUATION.md",
-    "Hash": "5fa8360bf6593b590064a713c0b7b89bae54b2f4e94c997a78102b1431c234c5"
+    "Hash": "8e0ee15111072463047f205df9b9b599164fd5c26c5011cc153feb172482071e"
   },
   {
     "File": "docs/LAUNCH_POSTS.md",
-    "Hash": "aee79a5dadbef96fd4e41e030ffb341dbc4cb32df46be3c1a892dc071256fbad"
+    "Hash": "9bc2b0d26cbd8e08bf980153370dcca996ae7def0803e1fb0c0474d2d71a2d8d"
   },
   {
-    "File": "Elsewhere.ico",
-    "Hash": "aa3561718b45bc7fc05032004aba2d112fa9b0bd076799a6279a75150bf88ad6"
+    "File": "docs/PAGE_RECORDS.md",
+    "Hash": "024f4696e9e10c2e26011f3f2b4a37f9928dbd829561cdc45422a19f7a5d4b31"
   },
   {
     "File": "engine.py",
-    "Hash": "fd736ac377ebb63fa4aeaabce2ac782a8f99de3257dccf1641a16695d1c153d2"
-  },
-  {
-    "File": "evaluation.py",
-    "Hash": "c6c7945f0ed9eba6221151b6d35f83a7cbc543fc16878fa7f8f26c29fb34e827"
+    "Hash": "7961b36952c26f32b2e083ccfb7d69686940fa42ef389b874fcea3d721ecc1d9"
   },
   {
     "File": "examples/README.md",
@@ -52,20 +76,8 @@
     "Hash": "1a3197e9f27916a1497ce55666605e5e2fab7ab5d8031df3ff62acae92bf5733"
   },
   {
-    "File": "LICENSE",
-    "Hash": "124d663b72f1592e29f001985456d523e83d422561c2b3edca80fb10e1e877e0"
-  },
-  {
     "File": "make_icon.py",
     "Hash": "d4bcd8edac02883d1514e499817c3ced4c98a8bcaf368daf67d0ad979fc975be"
-  },
-  {
-    "File": "PRIVACY.md",
-    "Hash": "716b3802edf1b6a63e1c831afe7592691f032a725ee4a7d8af138498b20bbcf6"
-  },
-  {
-    "File": "README.md",
-    "Hash": "b4aaf216e6b8ec4198c762e3dc30fc0cef86c231268b73125b9e5aac8622a0ec"
   },
   {
     "File": "requirements.txt",
@@ -73,19 +85,11 @@
   },
   {
     "File": "sanitize.py",
-    "Hash": "99de0b1b1d5266780d0a254255e3e5fd11da67ec225e88cf7b3c3c9b1c7e0423"
-  },
-  {
-    "File": "Setup Elsewhere.cmd",
-    "Hash": "2082fe47b09e02efae60b3dcd8e1ecc403af02a453275c00a9f16a93d25fe735"
+    "Hash": "2b2c857f3c5b302e62b967bafd445d63718e046de3da4bf6694a2d40ebf7cb0d"
   },
   {
     "File": "setup.py",
     "Hash": "fd605af213e37732769741048a623e59e3a90980f56243fa6a47325b6dde3220"
-  },
-  {
-    "File": "Start Elsewhere.vbs",
-    "Hash": "6de7c383dbd5ff348d1db83cb2aff9d10280be1b416e5e35b78162142b86c649"
   },
   {
     "File": "test_browser.py",
@@ -97,50 +101,30 @@
   },
   {
     "File": "test_core.py",
-    "Hash": "58afe4b6f81d064982f323e7919a7283464ad24ba14086f1c7ea588493260bcd"
+    "Hash": "2d16c1dbf2e0f0c9344f19585a41135ed3e383c0a12cb741a4875e5f211a2e90"
   },
   {
-    "File": "test_evaluate_ui.cjs",
-    "Hash": "2bf8f441d9e982eb22bb288032d03bc5dcf03b4bec7977da4a99acafcd3219e1"
-  },
-  {
-    "File": "test_evaluation.py",
-    "Hash": "1bc65b68f9d11a02b593b05366ec056557277229513de48df5dd3160e535a213"
+    "File": "test_records.py",
+    "Hash": "33745a39577c83e2d9d44c49c5fb121f6cc51937848b02f871298f97cf04a08d"
   },
   {
     "File": "test_ui.cjs",
-    "Hash": "37c1bfb8a12eaa4161d39ea2df61289e5e8c7d6a8948bd4252657e30d607face"
-  },
-  {
-    "File": "THIRD_PARTY.md",
-    "Hash": "f52a68126dde449fbf4603efddab7b5fb32f2c3f4860eb282c27c21f97109a38"
-  },
-  {
-    "File": "VALIDATION.md",
-    "Hash": "9632abbd731819c3cf0abc4d40934ae63685560c9339109430d2b58a8021f3f5"
+    "Hash": "b5980cb909f262431599056006e144315e624d6fe6f524d0ef392c6a2daa1bf5"
   },
   {
     "File": "web/app.css",
-    "Hash": "8563cb366129e2242eaaf04217337a8ad37be1501c721811ae55479d8059fe87"
+    "Hash": "7f2e91a96ca34a5570f4819b7884e80b445a0dc58c240aebd40899fe76d65395"
   },
   {
     "File": "web/app.js",
-    "Hash": "f399027edc0982a2363ea308677c10fbb2e482c814a4084aaecb49b5d85a75f9"
-  },
-  {
-    "File": "web/evaluate.js",
-    "Hash": "d03c0c8cb2aa1029e5df7a67e42ead36631fd31933edd73af06b30f305b4a2a2"
-  },
-  {
-    "File": "web/evaluation-controller.js",
-    "Hash": "a6030368e475131d77addc58030cc9b8544bec4805cad5953ab28c0e1106a5e1"
+    "Hash": "d9eadb63fd7c5bd07e21d42dfe390dfca24fe24ecc51af2ac3009b45ef6fa091"
   },
   {
     "File": "web/index.html",
-    "Hash": "48ec84d0bb84fc24294558737c6a9a1ca92f1e72f123ffc11797dec2e5dfd72e"
+    "Hash": "6c9b9642219588cddc7c7b5e25c71f5878d6efd36bc0bce471c815c19abf348f"
   },
   {
     "File": "web/page-controller.js",
-    "Hash": "0d7c2245430f5f874eca3ad72039b4e17836da545306961bfafc1b2c31d463e3"
+    "Hash": "834e8e3caa260519505a2f052111ca0dbd557d704eed13f3c0f048ffa439f6ea"
   }
 ]

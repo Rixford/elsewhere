@@ -1,3 +1,14 @@
+# Browser-first release — 2026-10-12
+
+- 57 Python tests and 13 JavaScript regression scenarios pass, plus both active browser-script syntax checks. Tests use isolated temporary data and mocked model responses; no paid requests or user browsing-data mutations were made.
+- New checks cover browser-only routes/startup, durable pages/traces after restart, original-output persistence before sanitation, completed records before bookmarking, exact stored-snapshot exports, original-versus-refined hashes, parent/link provenance, memory-off lineage, retained partial/cancelled/rejected responses, export authentication/path boundaries, and legacy evaluation-file preservation.
+- Unbookmarking after Clear history now restores a durable page and trace and reinserts its history entry. The browser start-page examples fill the address without calling a model. Page details exports only the selected page and explains the private content included.
+- An independent source review identified the unbookmark expiry regression and loss of rejected cloud responses; both were fixed and regression-tested. Existing generated-page sandbox/CSP and external-resource tests pass.
+- Interactive visual verification was unavailable: the computer-use browser inventory was empty, and an in-app preview could not be opened. The temporary smoke fixture was stopped afterward. No screenshot or new end-to-end real-model quality claim is made for this release.
+- Scanned 32 current source/document files and the unpublished predecessor's Git objects for personal home paths, recognizable provider tokens/private keys and private email addresses; no matches were found. User runtime paths, credentials, generated pages and exports are excluded from the public release. This is a scoped pattern/source review, not a guarantee against every possible secret.
+
+Earlier entries below describe their respective historical versions, including the now-removed evaluation workspace.
+
 # Closed-book evaluation workspace — 2026-09-17
 
 - 63 Python tests and fourteen JavaScript regression scenarios pass. Evaluation tests cover task validation, repetition/seeds, exact messages, original-output hashes, no continuity/repair, fixed measurement requirements, retained failures/partial output, terminal refusals/cancellation, advisory review errors, rating separation, privacy-aware exports, deletion confirmation, interrupted-run recovery, cloud-charge acknowledgment, API authentication/origin checks, optional cost math and task/protocol fingerprints.

@@ -1,11 +1,10 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Elsewhere</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script><script src="/evaluate.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Elsewhere</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
 <body>
   <header id="chrome">
     <div class="tabbar"><div class="wordmark" title="Elsewhere — an imagination browser"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18V6h14M5 12h11M11 18h8"/></svg><span>elsewhere</span></div><div id="tabs" role="tablist" aria-label="Open tabs"></div><button id="new-tab" class="icon" title="New tab (Ctrl+T)" aria-label="New tab">+</button><div class="tab-spacer"></div><span class="local-badge"><i></i><span id="mode-label">LOCAL</span></span></div>
     <div class="toolbar">
-      <div class="mode-switch" aria-label="Workspace"><button id="evaluate-button" aria-pressed="true">Evaluate</button><button id="explore-button" aria-pressed="false">Explore</button></div>
       <button id="back" class="icon" title="Back (Alt+Left)" aria-label="Back"><svg viewBox="0 0 24 24"><path d="m14 6-6 6 6 6M8 12h12"/></svg></button>
       <button id="forward" class="icon" title="Forward (Alt+Right)" aria-label="Forward"><svg viewBox="0 0 24 24"><path d="m10 6 6 6-6 6M16 12H4"/></svg></button>
       <button id="reload" class="icon" title="Reload saved page (Ctrl+R)" aria-label="Reload"><svg viewBox="0 0 24 24"><path d="M19 10a7 7 0 1 0-1 8M19 4v6h-6"/></svg></button>
@@ -18,27 +17,20 @@
     </div>
   </header>
   <main id="viewport">
-    <section id="evaluation" aria-label="Closed-book evaluation">
-      <div class="eval-heading"><div><small>ELSEWHERE / CLOSED BOOK</small><h1>Give an idea a shape.</h1><p>Probe learned websites, concepts, searches, and the ability to transfer a design into something new.</p></div><button id="eval-saved" class="secondary">Saved runs</button></div>
-      <div class="eval-grid">
-        <section class="eval-card"><h2>Build a task set</h2><p class="eval-muted">URLs are prompts. No site retrieval, reference images, or remote assets. Every attempt starts with fresh context.</p>
-          <div id="eval-cases"></div><div class="eval-actions"><button id="eval-add" class="secondary">+ Add task</button><button id="eval-examples" class="secondary">Load example set</button></div>
-          <div class="eval-options">
-            <label>Attempts per task<input id="eval-repeats" type="number" min="1" max="5" value="1"></label>
-            <label>Output token budget<input id="eval-budget" type="number" min="1024" max="8192" value="5200"></label>
-            <label>Local starting seed<input id="eval-seed" type="number" min="0" max="2147483642" value="0"></label>
-          </div>
-          <label class="eval-check"><input id="eval-review" type="checkbox"> Add an advisory language/structure review (extra model call; never edits the attempt)</label>
-          <details><summary>Optional cost estimate</summary><p class="eval-muted">Enter your provider's prices per million tokens. Blank means unknown. Estimates exclude unreported usage and cache discounts.</p><div class="eval-options"><label>Input price, USD<input id="eval-input-price" type="number" min="0" step="any" placeholder="Unknown"></label><label>Output price, USD<input id="eval-output-price" type="number" min="0" step="any" placeholder="Unknown"></label></div></details>
-          <p id="eval-plan" class="eval-muted"></p><label id="eval-cloud-label" class="eval-check" hidden><input id="eval-cloud" type="checkbox"> I understand this run sends these tasks to my selected provider and incurs API charges.</label>
-          <div class="eval-actions"><button id="eval-run" class="primary">Run evaluation</button><button id="eval-stop" class="secondary" hidden>Stop run</button><button id="eval-model" class="secondary">Choose model</button></div>
-          <p id="eval-progress" role="status" aria-live="polite">First responses are preserved. No automatic repair or retry.</p>
-        </section>
-        <section class="eval-card"><h2>What this measures</h2><dl class="eval-rubric"><dt>Intent</dt><dd>Does the page express the thought, query, or subject?</dd><dt>Criteria</dt><dd>Does it follow your explicit requirements?</dd><dt>Identity / transfer</dt><dd>Does it preserve recognizable structure or translate it appropriately?</dd><dt>Coherence</dt><dd>Do the content and visual choices work together?</dd><dt>Visual clarity</dt><dd>Is the composition readable and deliberate?</dd></dl><p class="eval-muted">Human ratings stay separate from code checks. This is a behavioral probe, not a direct reading of weights or a test of factual search results.</p><p class="eval-muted">Fixed viewports: 1280 × 720 and 640 × 720. Safety sanitation always applies; original source is retained. Only native HTML interactions run. Explore's layout fixes and simulated actions are disabled.</p><div id="eval-runs"></div></section>
+    <section id="blank" aria-label="New possibility">
+      <div class="welcome">
+        <span class="welcome-mark" aria-hidden="true">✧</span>
+        <p class="welcome-eyebrow">THE INTERNET, IMAGINED</p>
+        <h1>Where would you go?</h1>
+        <p class="welcome-copy">Enter a website, a question, or an idea in the address bar.<br>Watch a model turn what it has learned into a place you can explore.</p>
+        <div class="welcome-examples" aria-label="Try an idea">
+          <button class="secondary" id="example-site">google.com <span aria-hidden="true">↗</span></button>
+          <button class="secondary" id="example-idea">A library under the ocean <span aria-hidden="true">↗</span></button>
+          <button class="secondary" id="example-remix">Wikipedia for imaginary animals <span aria-hidden="true">↗</span></button>
+        </div>
+        <p class="welcome-note">Generated from learned knowledge. No actual websites visited.<br>Pages are saved here. Bookmark your favorites; inspect their origins in Page details.</p>
       </div>
-      <section id="eval-report" class="eval-card" hidden></section>
     </section>
-    <div id="blank" aria-label="Empty page"></div>
     <iframe id="page" title="Imagined website" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer" hidden></iframe>
     <div id="loading" hidden><div class="orbit"><i></i><i></i><i></i></div><h1>Going elsewhere.</h1><p id="loading-stage">Imagining your page</p><small id="loading-detail"></small></div>
     <div id="error" role="alert" hidden><span class="error-symbol">↗</span><h2>This path hasn’t formed yet.</h2><p id="error-message"></p><button id="retry" class="primary">Try again</button></div>

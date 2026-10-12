@@ -166,5 +166,25 @@ async function main(){
   assert.equal(vm.runInContext('state.tabs[1].pages[0].id',context),'kept');
   assert.equal(vm.runInContext('state.clearingHistory',context),false);
   console.log('PASS: clearing history requires confirmation and resets tab history while retaining bookmarks');
+
+  const shell=fs.readFileSync(__dirname+'/web/index.html','utf8');
+  assert.ok(!shell.includes('id="evaluation"')&&!shell.includes('evaluate.js'));
+  vm.runInContext('state.panel=null;renderSaved()',context);
+  assert.equal(elements.get('blank').hidden,false);
+  elements.get('example-site').textContent='google.com ↗';
+  const beforeExample=calls.filter(c=>c.url==='/api/generate').length;
+  elements.get('example-site').onclick();
+  assert.equal(elements.get('address').value,'google.com');
+  assert.equal(calls.filter(c=>c.url==='/api/generate').length,beforeExample);
+  console.log('PASS: browser starts directly; examples fill the address without an unexpected model call');
+
+  vm.runInContext("state.tabs[0].pages=[{id:'record-page',title:'Ocean library',prompt:'ocean',html:'<h1>Ocean</h1>',settings:{memory:true},parent_id:'parent-page'}];state.tabs[0].index=0;state.panel=null;showDetails()",context);
+  const detailNodes=descendants(elements.get('panel-content'));
+  assert.ok(detailNodes.some(n=>n.textContent==='parent-page'));
+  assert.ok(detailNodes.some(n=>n.textContent?.includes('Review these files before sharing')));
+  responses.set('/api/export-record',{path:'local-export.record.json'});
+  await detailNodes.find(n=>n.textContent==='Export record (JSON)').onclick();
+  assert.equal(calls.filter(c=>c.url==='/api/export-record').at(-1).body.id,'record-page');
+  console.log('PASS: Page details exports the selected record with a private-content notice');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

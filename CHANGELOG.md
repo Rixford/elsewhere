@@ -1,3 +1,13 @@
+# Browser-first Elsewhere — 2026-10-12
+
+- Open directly into the imagination browser with a short introduction and editable example prompts; remove Evaluate UI, APIs and generation paths.
+- Keep existing evaluation data untouched; preserve the earlier app under the `pre-browser-focus-2026-10-12` Git tag.
+- Save new pages and traces durably until explicit history deletion; retain the complete history index and restore durable history when removing a bookmark.
+- Keep traceability in Page details: parent IDs, model/provider/settings, original output, separate refinements, code fingerprints, source hashes and available partial/error responses.
+- Add local versioned JSON record export alongside HTML export, with a private-content notice. Preserve the stored snapshot instead of exporting a newly sanitized substitute.
+- Save original output before validation and the completed trace before enabling bookmarking.
+- Keep local Qwen, optional cloud providers, generated-page containment, tabs, continuity, bookmarks and bounded presentation review.
+
 # Closed-book evaluation workspace
 
 - Make Evaluate the initial workspace; retain the existing browser under Explore.

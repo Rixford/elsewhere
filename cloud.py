@@ -89,7 +89,10 @@ class CloudEngine(Engine):
     def generate(self, *args, **kwargs):
         raw,stats=super().generate(*args,**kwargs)
         if not re.search(r'<html\b',raw,re.I):
-            raise ProviderError('The provider returned a response instead of an HTML page. It was not automatically retried.')
+            failure=ProviderError('The provider returned a response instead of an HTML page. It was not automatically retried.')
+            failure.partial_text=raw
+            failure.response_stats=stats
+            raise failure
         return raw,stats
 
     def complete(self, messages, cancel, *, tokens=3200, temperature=.9, seed=0, progress=None, json_output=False):

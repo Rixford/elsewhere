@@ -10,7 +10,9 @@ Setup discovers the current user's Windows data directory. `runtime-path.txt` is
 
 In Local mode, inference uses the installed Qwen model. Generated HTML, prompts, continuity context, generation traces, bookmarks, history and diagnostic logs are stored locally. They can contain whatever you entered or the model generated. Local storage is not encrypted by this application.
 
-Evaluate also stores task text, criteria, original model output and human rating notes in a separate local `evaluations` directory. These records persist until explicitly deleted from a report; clearing Explore history does not remove them. Summary exports omit task/output content and rating notes. Full evaluation exports require acknowledgment because they contain that material. Neither export is uploaded by the app.
+New page snapshots and generation records persist until you clear history. Bookmarks preserve both across history clearing. JSON record exports include prompts, original/refined HTML and linked-page context; the UI explains this before the export action. They are saved locally and never uploaded automatically. The export preserves stored source rather than live form state.
+
+Old evaluation files remain in the separate local `evaluations` directory. This version has no evaluation interface and does not read or delete those files. Removing that earlier interface does not erase existing private records.
 
 History clearing removes recent and archived browsing snapshots and their traces; it intentionally keeps bookmarks and exports. It is not a complete deletion of all application files or logs. API keys stay in backend memory for the session and are forgotten when the application exits. The temporary `session.json` file contains a local authentication token and must not be shared.
 

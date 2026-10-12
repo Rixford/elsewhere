@@ -197,7 +197,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.app.status()['bookmarks'][0]['id'],pid)
         self.assertEqual(self.app.load_page(pid)['title'],'Library')
         self.app.bookmark(pid,False)
-        self.assertTrue(cached.exists())
+        self.assertEqual(self.app.page_path(pid).parent.name,'pages')
         self.assertEqual(self.app.status()['bookmarks'],[])
         self.assertEqual(self.app.load_page(pid)['id'],pid)
 

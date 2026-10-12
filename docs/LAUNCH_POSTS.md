@@ -18,7 +18,7 @@ https://github.com/Rixford/elsewhere
 
 This screenshot used OpenAI Astra via its API. Local Qwen works offline after setup; cloud models need internet and have API costs.
 
-Links can generate the next imagined page with context from the last. Back/Forward restores saved pages. Bookmark a discovery to keep it.
+Links can generate the next imagined page with context from the last. Back/Forward restores saved pages. Pages stay saved locally. Bookmark favorites; export the original response and page record for a closer look.
 
 The fun question: how far can you wander before an invented site loses its identity?
 
@@ -38,7 +38,8 @@ What it currently does:
 
 - Runs on Windows with **Qwen3.5 4B locally**, offline after the initial setup/download.
 - Optionally uses **OpenAI or Anthropic with your own API key**. The screenshot used OpenAI Astra; cloud generation requires internet and incurs API charges.
-- Supports tabs, cached Back/Forward navigation and permanent local bookmarks.
+- Supports tabs, saved Back/Forward navigation and permanent local bookmarks.
+- Keeps the original response, page structure and generation context. Page details exports a local JSON record without a separate evaluation interface.
 - Uses optional model review to check presentation and language. Review is another model call; code checks always run.
 - Keeps generated pages isolated: no remote assets, real sign-ins or purchases. Page controls are simulated by the app.
 
